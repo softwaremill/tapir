@@ -16,12 +16,11 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CompletableFuture, ExecutionException}
+import java.util.concurrent.{CompletableFuture, ConcurrentHashMap, ExecutionException}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
-import java.util.concurrent.atomic.AtomicReference
+import scala.util.{Success, Try}
 
 case class NettySyncServer(
     serverEndpoints: Vector[ServerEndpoint[OxStreams & WebSockets, Identity]],
@@ -129,19 +128,19 @@ case class NettySyncServer(
           serverOutcome.complete(outcome).discard
         }.discard
 
-        // an interruption means that the current scope ended: then, requests the stop, and waits until it's done
-        def awaitOutcome(scopeEnded: Boolean): (ServerOutcome, Boolean) =
-          try (serverOutcome.get(), scopeEnded)
+        val (outcome, scopeEnded) =
+          try (serverOutcome.get(), false)
           catch
-            case _: InterruptedException =>
+            case _: InterruptedException => // the current scope ended
               stopRequested.complete(()).discard
-              awaitOutcome(scopeEnded = true)
+              // join() ignores interrupts; Ox interrupts a fork only once
+              (serverOutcome.join(), true)
 
-        awaitOutcome(scopeEnded = false) match
-          case (ServerOutcome.Stopped, _) => ()
-          // otherwise, the error is thrown from stop()
-          case (ServerOutcome.StopFailed(e), scopeEnded) => if scopeEnded then logger.error("Error when stopping the server", e)
-          case (ServerOutcome.Failed(e), _)              =>
+        outcome match
+          case ServerOutcome.Stopped       => ()
+          // otherwise, the error is thrown from stop(); logging, as stop() might never be called
+          case ServerOutcome.StopFailed(e) => if scopeEnded then logger.error("Error when stopping the server", e)
+          case ServerOutcome.Failed(e)     =>
             // if the server didn't start, the error is thrown from start()
             if !started.completeExceptionally(e) then
               // also logging, as the error is lost if the current scope has already ended
@@ -173,6 +172,7 @@ case class NettySyncServer(
     val eventExecutor = new DefaultEventExecutor()
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown = new AtomicBoolean(false)
+    val requestsNotStarted = new RequestsNotStarted
     // set in the server's scope, read once it ends (its forks are then joined, so the writes are visible); vars, as the scope might fail
     var serverChannel: Option[Channel] = None
     var drained: Try[Unit] = Success(())
@@ -184,13 +184,17 @@ case class NettySyncServer(
           val serverRoute = route(runner)
           val channel = NettyBootstrap(
             config,
-            new NettyServerHandler(serverRoute, unsafeRunF(runner), channelGroup, isShuttingDown, config),
+            new NettyServerHandler(serverRoute, unsafeRunF(runner, requestsNotStarted), channelGroup, isShuttingDown, config),
             eventLoopGroup,
             socketOverride
           ).sync().channel()
           serverChannel = Some(channel)
           started.complete(channel.localAddress().asInstanceOf[SA]).discard
-          try stopRequested.get().discard // also interrupted if the server's scope fails
+          try stopRequested.get().discard
+          catch
+            case e: InterruptedException => // the server's scope failed
+              requestsNotStarted.scopeFailed()
+              throw e
           finally drained = Try(drain(channel, channelGroup, isShuttingDown))
         })
       catch case e: Throwable => Left(e)
@@ -215,47 +219,39 @@ case class NettySyncServer(
       case many      => Route.combine(many)
     }
 
-  private def unsafeRunF(inScopeRunner: InScopeRunner)(
+  private def unsafeRunF(inScopeRunner: InScopeRunner, requestsNotStarted: RequestsNotStarted)(
       callToExecute: () => Identity[ServerResponse[NettyResponse]]
   ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
     val scalaPromise = Promise[ServerResponse[NettyResponse]]()
 
-    // used to cancel the fork, possible states:
-    // - Cancelled: needed if cancellation happens after the fork starts, but before it is set in the atomic reference
-    // - CancellableFork: used when cancellation using interruption is enabled
-    // - None: means that the fork was not set yet
-    object Cancelled
-    val runningFork = new AtomicReference[None.type | CancellableFork[Unit] | Cancelled.type](None)
+    val cancelled = new AtomicBoolean(false)
+    // completed only if cancellation using interruption is enabled
+    val cancellableFork = new CompletableFuture[CancellableFork[Unit]]()
+    requestsNotStarted.add(scalaPromise)
     // #4747: we are creating forks using the concurrency scope within which the netty server is running
     // however, this is called on a Netty-managed thread, hence we need to use the inScopeRunner
     inScopeRunner.async {
       def run(): Unit =
-        if runningFork.get() != Cancelled then
-          try scalaPromise.success(callToExecute())
+        requestsNotStarted.remove(scalaPromise)
+        if !cancelled.get() then
+          try scalaPromise.trySuccess(callToExecute()).discard
           catch
             case e: Throwable =>
               // a Promise boxes fatal errors & interruption, so a 500 is still sent
-              scalaPromise.failure(e)
+              scalaPromise.tryFailure(e).discard
               if !NonFatal(e) then throw e
 
-      if options.interruptServerLogicWhenRequestCancelled then
-        val forked = forkCancellable(run())
-        // we only update the state if it's not cancelled already
-        runningFork.getAndAccumulate(forked, (cur, giv) => if cur != Cancelled then giv else cur) match {
-          case None                     => // common "happy path" case
-          case _: CancellableFork[Unit] => throw new IllegalStateException("Another fork was already set")
-          case Cancelled                => forked.cancelNow() // cancellation happened before the fork was set
-        }
+      if options.interruptServerLogicWhenRequestCancelled then cancellableFork.complete(forkCancellable(run())).discard
       else forkDiscard(run())
     }
 
     (
       scalaPromise.future,
       () => {
-        runningFork.getAndSet(Cancelled) match {
-          case fork: CancellableFork[Unit] => fork.cancelNow()
-          case _                           => // skip - fork not yet set
-        }
+        requestsNotStarted.remove(scalaPromise)
+        cancelled.set(true)
+        // if the fork isn't created yet, cancels it once it is
+        cancellableFork.thenAccept(_.cancelNow()).discard
         Future.unit
       }
     )
@@ -294,6 +290,28 @@ object NettySyncServer:
 
   def apply(serverOptions: NettySyncServerOptions, config: NettyConfig): NettySyncServer =
     NettySyncServer(Vector.empty, Vector.empty, serverOptions, config)
+
+/** Requests passed to the server's scope, for which the server logic hasn't started yet. If the scope fails, they might never start; they
+  * are then failed, so that they're answered with a 500, instead of delaying the shutdown.
+  */
+private class RequestsNotStarted:
+  private val requests = ConcurrentHashMap.newKeySet[Promise[?]]()
+  @volatile private var failed = false
+
+  def add(request: Promise[?]): Unit =
+    requests.add(request).discard
+    // checked after adding, so that each request is failed either here, or in scopeFailed()
+    if failed then fail(request)
+
+  /** Call when the server logic starts, or when the request is cancelled. */
+  def remove(request: Promise[?]): Unit = requests.remove(request).discard
+
+  def scopeFailed(): Unit =
+    failed = true
+    requests.forEach(fail)
+
+  private def fail(request: Promise[?]): Unit =
+    request.tryFailure(new IllegalStateException("The server's scope failed before handling the request")).discard
 
 private enum ServerOutcome:
   case Stopped

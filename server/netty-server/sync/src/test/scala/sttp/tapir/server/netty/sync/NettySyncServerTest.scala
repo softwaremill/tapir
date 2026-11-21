@@ -22,7 +22,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.*
 import sttp.tapir.tests.*
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import ox.flow.Flow
 import scala.annotation.nowarn
@@ -67,7 +67,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         expectContinueTests(createServerTest, eventLoopGroup) ++
         List(scopeEndTest(eventLoopGroup)) ++
         fatalErrorTests(eventLoopGroup) ++
-        List(quietPeriodTest, startFailureTest(eventLoopGroup))
+        List(quietPeriodTest, startFailureTest(eventLoopGroup), requestsNotStartedTest)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -189,6 +189,27 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           }
         }
       },
+      createServerTest.testServerLogic(
+        endpoint
+          .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
+          .handleSuccess(_ => (in: Flow[String]) => in),
+        "respond with 426 to a web socket handshake with an unsupported version, and handle later requests on the same connection"
+      ) { (_, baseUri) =>
+        val handshake = "GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
+          "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 99\r\n\r\n"
+        rawSocket(baseUri.port.get).use { socket =>
+          for {
+            _ <- sendRaw(socket, handshake.getBytes(StandardCharsets.US_ASCII))
+            response1 <- readRawResponseWithHeaders(socket)
+            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            response2 <- readRawResponse(socket)
+          } yield {
+            (response1._1 shouldBe 426): Unit
+            (response1._2 should contain("sec-websocket-version: 13")): Unit
+            response2 shouldBe ((400, "Incorrect Web Socket handshake"))
+          }
+        }
+      },
       // the only way for a request to fail, instead of resulting in a 500 response created by the exception interceptor
       createServerTest.testServerLogic(
         endpoint.get
@@ -220,6 +241,29 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .response(asByteArrayAlways)
           .send(backend)
           .map(_.body.length shouldBe 10 * 1024 * 1024)
+      }, {
+        val interrupted = new CountDownLatch(1)
+        createServerTest.testServerLogic(
+          endpoint.get
+            .out(stringBody)
+            .handleSuccess { _ =>
+              try
+                Thread.sleep(15000)
+                "done"
+              catch
+                case e: InterruptedException =>
+                  interrupted.countDown()
+                  throw e
+            },
+          "client disconnecting interrupts the server logic"
+        ) { (backend, baseUri) =>
+          basicRequest
+            .get(uri"$baseUri")
+            .readTimeout(300.millis)
+            .send(backend)
+            .attempt
+            .map(_ => interrupted.await(5, TimeUnit.SECONDS) shouldBe true)
+        }
       }
     )
 
@@ -259,6 +303,21 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         Thread.startVirtualThread(() => result.complete(Try(supervised(NettySyncServer(config).start().port))).discard).discard
         result.get(10, TimeUnit.SECONDS).failed.get shouldBe a[java.io.IOException] // not wrapped
       finally taken.close()
+    }
+
+  /** A request queued to the server's scope just before it fails is never run; that's not reproducible deterministically, hence only the
+    * bookkeeping is tested.
+    */
+  def requestsNotStartedTest: Test =
+    Test("requests which haven't started when the server's scope fails are failed") {
+      val requests = new RequestsNotStarted
+      val (started, notStarted, addedAfterFailure) = (Promise[Unit](), Promise[Unit](), Promise[Unit]())
+      requests.add(started)
+      requests.add(notStarted)
+      requests.remove(started)
+      requests.scopeFailed()
+      requests.add(addedAfterFailure)
+      List(started, notStarted, addedAfterFailure).map(_.isCompleted) shouldBe List(false, true, true)
     }
 
   /** Sync-only: the other tests use a shared event loop group, which isn't shut down when the server stops. */

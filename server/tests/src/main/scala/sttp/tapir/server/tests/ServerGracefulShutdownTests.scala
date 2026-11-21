@@ -5,11 +5,13 @@ import cats.syntax.all._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.client4._
+import sttp.model.HeaderNames
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.tests._
 
+import java.io.ByteArrayInputStream
 import java.net.{ConnectException, Socket}
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.{CountDownLatch, TimeUnit}
@@ -145,6 +147,97 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
             // only the last response closes the connection
             (List(response1, response2).map(_._2.contains("connection: close")) shouldBe List(false, true)): Unit
             afterResponses shouldBe -1 // the request sent during shutdown isn't answered, and the connection is closed
+          }
+        }
+      }
+    }, {
+      // larger than the socket buffers, so that the response is still being written, as the client doesn't read it
+      val bodySize = 32 * 1024 * 1024
+      testServerLogicWithStop(
+        endpoint
+          .out(header(HeaderNames.ContentLength, bodySize.toString))
+          .out(inputStreamBody)
+          .serverLogic(_ => pureResult(new ByteArrayInputStream(new Array[Byte](bodySize)).asRight[Unit])),
+        "Server completes a response which is being streamed during shutdown, before closing the connection",
+        gracefulShutdownTimeout = Some(30.seconds)
+      ) { (stopServer) => (_, baseUri) =>
+        val port = baseUri.port.get
+        rawSocket(port).use { socket =>
+          for {
+            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            firstByte <- IO.blocking(socket.getInputStream.read()) // the response is being written
+            runningStop <- stopServer.start
+            _ <- awaitConnectionsRefused(port).timeout(5.seconds)
+            rest <- IO.blocking(socket.getInputStream.readAllBytes()) // until the connection is closed
+            _ <- runningStop.joinWithNever
+          } yield {
+            val bodyStart = new String(rest.take(1000), StandardCharsets.US_ASCII).indexOf("\r\n\r\n") + 4
+            (firstByte shouldBe 'H'.toInt): Unit
+            rest.length - bodyStart shouldBe bodySize
+          }
+        }
+      }
+    }, {
+      val requestReceived = new CountDownLatch(1)
+      val releaseRequest = new CountDownLatch(1)
+      testServerLogicWithStop(
+        endpoint
+          .out(plainBody[String])
+          .serverLogic { _ =>
+            m.eval(requestReceived.countDown())
+              .flatMap(_ => m.blocking(releaseRequest.await(10, TimeUnit.SECONDS)))
+              .flatMap(_ => pureResult("processing finished".asRight[Unit]))
+          },
+        "Server stops once the client of an in-flight request disconnects during shutdown",
+        gracefulShutdownTimeout = Some(30.seconds)
+      ) { (stopServer) => (_, baseUri) =>
+        val port = baseUri.port.get
+        (for {
+          runningStop <- rawSocket(port).use { socket =>
+            for {
+              _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+              _ <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
+              runningStop <- stopServer.start
+              _ <- awaitConnectionsRefused(port).timeout(5.seconds)
+            } yield runningStop
+          }
+          stopped <- runningStop.joinWithNever.timeout(10.seconds).attempt
+        } yield stopped shouldBe Right(())).guarantee(IO(releaseRequest.countDown()))
+      }
+    }, {
+      val requestsReceived = new CountDownLatch(2) // both pipelined requests are handled before the shutdown starts
+      val releaseRequests = new CountDownLatch(1)
+      testServerLogicWithStop(
+        endpoint
+          .in(query[Boolean]("fail"))
+          .out(plainBody[String])
+          .serverLogic { fail =>
+            m.eval(requestsReceived.countDown())
+              .flatMap(_ => m.blocking(releaseRequests.await(10, TimeUnit.SECONDS)))
+              .flatMap(_ => if (fail) m.error[Either[Unit, String]](new RuntimeException("boom")) else pureResult("ok".asRight[Unit]))
+          },
+        "Server completes a failed pipelined request, and the next one, during shutdown",
+        interceptors = _.exceptionHandler(None), // so that the error is handled by the server, instead of an interceptor
+        gracefulShutdownTimeout = Some(30.seconds)
+      ) { (stopServer) => (_, baseUri) =>
+        val port = baseUri.port.get
+        def request(fail: Boolean) = s"GET /?fail=$fail HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
+        rawSocket(port).use { socket =>
+          for {
+            _ <- sendRaw(socket, request(fail = true) ++ request(fail = false))
+            requestsArrived <- IO.blocking(requestsReceived.await(10, TimeUnit.SECONDS))
+            runningStop <- stopServer.start
+            _ <- awaitConnectionsRefused(port).timeout(5.seconds)
+            _ <- IO(releaseRequests.countDown())
+            response1 <- readRawResponseWithHeaders(socket)
+            response2 <- readRawResponseWithHeaders(socket)
+            afterResponses <- IO.blocking(socket.getInputStream.read())
+            _ <- runningStop.joinWithNever
+          } yield {
+            (requestsArrived shouldBe true): Unit
+            (List(response1, response2).map { case (code, _, body) => (code, body) } shouldBe List((500, ""), (200, "ok"))): Unit
+            (List(response1, response2).map(_._2.contains("connection: close")) shouldBe List(false, true)): Unit
+            afterResponses shouldBe -1
           }
         }
       }

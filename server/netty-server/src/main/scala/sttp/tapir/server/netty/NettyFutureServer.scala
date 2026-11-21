@@ -3,7 +3,7 @@ package sttp.tapir.server.netty
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
-import io.netty.util.concurrent.DefaultEventExecutor
+import io.netty.util.concurrent.{DefaultEventExecutor, EventExecutor}
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
@@ -13,9 +13,10 @@ import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, Net
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future, blocking}
+import scala.concurrent.{ExecutionContext, Future}
 
 case class NettyFutureServer(
     serverEndpoints: Vector[ServerEndpoint[Any, Future]],
@@ -118,16 +119,15 @@ case class NettyFutureServer(
 
   private def waitForClosedChannels(
       channelGroup: ChannelGroup,
+      scheduler: EventExecutor,
       startNanos: Long,
       gracefulShutdownTimeoutNanos: Option[Long]
   ): Future[Unit] =
     if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
-      Future {
-        blocking {
-          Thread.sleep(100)
-        }
-      }.flatMap(_ => {
-        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
+      // not sleeping on `ec`, which might be needed to complete the in-flight requests
+      val wait = scheduler.schedule(new Runnable { override def run(): Unit = () }, 100, TimeUnit.MILLISECONDS)
+      nettyFutureToScala(wait).flatMap(_ => {
+        waitForClosedChannels(channelGroup, scheduler, startNanos, gracefulShutdownTimeoutNanos)
       })
     } else {
       nettyFutureToScala(channelGroup.close()).map(_ => ())
@@ -147,6 +147,7 @@ case class NettyFutureServer(
       .flatMap { _ =>
         waitForClosedChannels(
           channelGroup,
+          eventExecutor,
           startNanos = System.nanoTime(),
           gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
         )

@@ -8,6 +8,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.monad.FutureMonad
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
@@ -15,7 +16,7 @@ import sttp.client4._
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -79,6 +80,32 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
       IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).start()))
         .flatMap(server => IO.fromFuture(IO.delay(server.stop())).timed)
         .map { case (stopDuration, _) => stopDuration should be < 2.seconds }
+        .unsafeToFuture()
+    },
+    Test("a route throwing an exception, instead of returning a failed Future, should result in a 500, sent after the earlier responses") {
+      import cats.effect.unsafe.implicits.global
+
+      val releaseFirst = Promise[Unit]()
+      val route: FutureRoute = request =>
+        if (request.pathSegments == List("first"))
+          releaseFirst.future.map(_ => Some(ServerResponse[NettyResponse](StatusCode.Ok, Nil, None, None)))(ec)
+        else throw new RuntimeException("boom")
+      def request(path: String) = s"GET /$path HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
+
+      Resource
+        .make(IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).addRoute(route).start())))(server =>
+          IO.fromFuture(IO.delay(server.stop()))
+        )
+        .flatMap(server => rawSocket(server.port))
+        .use { socket =>
+          for {
+            _ <- sendRaw(socket, request("first") ++ request("second"))
+            _ <- IO.sleep(100.millis) // so that the second request is handled while the first one is in flight
+            _ <- IO(releaseFirst.success(()))
+            response1 <- readRawResponse(socket)
+            response2 <- readRawResponse(socket)
+          } yield List(response1, response2) shouldBe List((200, ""), (500, ""))
+        }
         .unsafeToFuture()
     }
   )

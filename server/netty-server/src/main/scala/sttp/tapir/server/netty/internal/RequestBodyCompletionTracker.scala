@@ -16,8 +16,9 @@ private[netty] class RequestBodyCompletionTracker extends ChannelDuplexHandler {
 
   // The initial value is never read in practice: the request timeout is armed only once a request's headers have passed through this
   // handler, which sets the flag. `true` is the safe default, blaming the server (503) rather than the client (408).
-  private var _bodyFullyReceived: Boolean = true
-  private var _continueAwaited: Boolean = false
+  // volatile, as read by NettyServerHandler, which might run on another executor
+  @volatile private var _bodyFullyReceived: Boolean = true
+  @volatile private var _continueAwaited: Boolean = false
 
   def bodyFullyReceived: Boolean = _bodyFullyReceived
 

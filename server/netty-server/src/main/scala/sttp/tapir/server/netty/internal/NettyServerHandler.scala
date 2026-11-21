@@ -4,7 +4,7 @@ import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
-import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
+import io.netty.handler.codec.http.websocketx.{WebSocketServerHandshakerFactory, WebSocketVersion}
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
@@ -31,7 +31,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -50,7 +50,8 @@ class NettyServerHandler[F[_]](
 
   // Cancellation handling with eventLoopContext, lastResponseSent, and pendingResponses has been adapted
   // from http4s: https://github.com/http4s/http4s-netty/pull/396/files
-  // By using the Netty event loop assigned to this channel we get two benefits:
+  // By using the executor of this handler (the channel's event loop, unless the handler is added with another executor), we get two
+  // benefits:
   //  1. We can avoid the necessary hopping around of threads since Netty pipelines will
   //     only pass events up and down from within the event loop to which it is assigned.
   //     That means calls to ctx.read(), and ct.write(..), would have to be trampolined otherwise.
@@ -69,11 +70,11 @@ class NettyServerHandler[F[_]](
   private val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
-  // connection is closed along with the response. A plain var, as it's only touched on the channel's event loop.
+  // connection is closed along with the response. A plain var, as it's only touched on the handler's executor.
   private var requestTimeoutHandled = false
 
   // Requests received, for which the response isn't fully sent yet. When the server is shutting down, the connection is closed once this
-  // drops to 0. A plain var, as it's only touched on the channel's event loop.
+  // drops to 0. A plain var, as it's only touched on the handler's executor.
   private var requestsInFlight = 0
 
   // Requests received, for which writing the response hasn't started yet. When the server is shutting down, only the last response
@@ -111,8 +112,7 @@ class NettyServerHandler[F[_]](
 
   private def initHandler(ctx: ChannelHandlerContext): Unit = {
     if (eventLoopContext == null) {
-      // Initialize our ExecutionContext
-      eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
+      eventLoopContext = ExecutionContext.fromExecutor(ctx.executor())
       config.idleTimeout.foreach { idleTimeout =>
         ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis, TimeUnit.MILLISECONDS))
       }
@@ -121,16 +121,18 @@ class NettyServerHandler[F[_]](
         ctx.pipeline().addAfter(ServerCodecHandlerName, RequestBodyTrackerHandlerName, tracker)
         requestBodyTracker = Some(tracker)
       }
-      // When the channel closes we want to cancel any pending dispatches.
-      // Since the listener will be executed from the channels EventLoop everything is thread safe.
+      // When the channel closes we want to cancel any pending dispatches. Not using `channelInactive`, as it's not propagated by the
+      // `HandlerPublisher`, which netty-reactive-streams adds before this handler while a request body is streamed.
       val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
-        if (logger.isDebugEnabled) {
-          logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
-        }
-        while (pendingResponses.nonEmpty) {
-          pendingResponses.dequeue().apply(): Unit // running the cancellation for background side-effects only (best-effort)
-        }
+        if (ctx.executor().inEventLoop()) cancelPendingResponses(ctx) else ctx.executor().execute(() => cancelPendingResponses(ctx))
       }
+    }
+  }
+
+  private def cancelPendingResponses(ctx: ChannelHandlerContext): Unit = {
+    logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
+    while (pendingResponses.nonEmpty) {
+      pendingResponses.dequeue().apply(): Unit // running the cancellation for background side-effects only (best-effort)
     }
   }
 
@@ -143,7 +145,13 @@ class NettyServerHandler[F[_]](
 
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
-    if (requestBodyTracker.forall(t => t.bodyFullyReceived || t.continueAwaited)) {
+    // a started response, which isn't fully sent yet
+    val writingResponse = requestsInFlight > responsesNotStarted
+    if (writingResponse) {
+      // an error response would be sent only after that response, which might never complete
+      logger.error(s"Closing connection: no response produced within the request timeout of $timeoutDescription")
+      val _ = ctx.close()
+    } else if (requestBodyTracker.forall(t => t.bodyFullyReceived || t.continueAwaited)) {
       logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
@@ -174,143 +182,142 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
+  override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit =
+    if (isShuttingDown.get()) rejectRequest(ctx, request)
+    else handleRequest(ctx, request)
 
-    def writeError500(req: HttpRequest, reason: Throwable): ChannelFuture = {
-      logger.error("Error while processing the request", reason)
-      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-      res.handleCloseAndKeepAliveHeaders(req)
-
-      val written = ctx.writeAndFlush(res)
-      written.closeIfNeeded(req)
-      written
+  private def rejectRequest(ctx: ChannelHandlerContext, request: HttpRequest): Unit =
+    if (requestsInFlight == 0) {
+      logger.info("Rejecting request, server is shutting down")
+      writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
+    } else {
+      // A pipelined request: a 503 can't be written before the responses to the earlier requests. Instead, the request is dropped, and
+      // the connection is closed once those responses are sent.
+      logger.debug("Dropping a pipelined request, server is shutting down")
+      request match {
+        case r: StreamedHttpRequest => r.subscribe(new CancellingSubscriber)
+        case _                      => // the body is released by SimpleChannelInboundHandler
+      }
     }
 
-    def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
-      val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
-        new IdleStateHandler(0, requestTimeout.toMillis, 0, TimeUnit.MILLISECONDS)
-      }
-      requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
-      val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
-        try {
-          route(NettyServerRequest(req, ctx))
-            .map {
-              case Some(response) => response
-              case None           => ServerResponse.notFound
-            }
-        } catch {
-          case e: IllegalArgumentException if e.getMessage.startsWith("URLDecoder:") => {
-            logger.debug(s"Invalid request URL: ${req.uri()}", e)
-            me.unit(ServerResponse[NettyResponse](StatusCode.BadRequest, Nil, None, None))
+  // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't upload
+  // bodies that are then discarded (#5503, see TapirHttpStreamsServerHandler)
+  private def handleRequest(ctx: ChannelHandlerContext, request: HttpRequest): Unit = request match {
+    case full: FullHttpRequest =>
+      val req = full.retain()
+      runRoute(ctx, req, () => { val _ = req.release() })
+    case req: TapirStreamedHttpRequest => runRoute(ctx, req)
+    case req: StreamedHttpRequest      =>
+      // from a custom pipeline with the plain `HttpStreamsServerHandler`: tracking the request body subscription status to discard it
+      // safely, if it's never used; validating the body's length
+      runRoute(ctx, new TapirStreamedHttpRequest(req))
+    case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
+  }
+
+  /** Runs the route, and writes its response after the responses to earlier requests on this connection, in request order. */
+  private def runRoute(ctx: ChannelHandlerContext, req: HttpRequest, releaseReq: () => Unit = () => ()): Unit = {
+    val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
+      new IdleStateHandler(0, requestTimeout.toMillis, 0, TimeUnit.MILLISECONDS)
+    }
+    requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
+    val (runningFuture, cancellationSwitch) = startRoute(ctx, req)
+    pendingResponses.enqueue(cancellationSwitch)
+    requestsInFlight += 1
+    responsesNotStarted += 1
+    // the failure of a previous response is already handled, and mustn't prevent sending later ones
+    val previousResponsesSent = lastResponseSent.recover { case _ => () }(using eventLoopContext)
+    lastResponseSent = previousResponsesSent.flatMap { _ =>
+      runningFuture.transform { result =>
+        responsesNotStarted -= 1
+        val _ = pendingResponses.dequeueFirst(_ eq cancellationSwitch)
+        def cleanUp(responseWritten: Option[ChannelFuture]): Unit = {
+          releaseReq()
+          afterResponseWritten(responseWritten) {
+            requestCompleted(ctx)
+            discardBodyIfUnused(req)
           }
         }
-      }
-      pendingResponses.enqueue(cancellationSwitch)
-      requestsInFlight += 1
-      responsesNotStarted += 1
-      // the failure of a previous response is already handled, and mustn't prevent sending later ones
-      val previousResponsesSent = lastResponseSent.recover { case _ => () }(using eventLoopContext)
-      lastResponseSent = previousResponsesSent.flatMap { _ =>
-        runningFuture
-          .transform { result =>
-            responsesNotStarted -= 1
-            // completed once the response is written (None if nothing was written); used to clean up the request body, and to track the
-            // requests in flight
-            var responseCompletedPromise: Option[ChannelFuture] = None
-            try {
-              // #4131: the channel might be closed if the request timed out
-              // both timeout & response-ready events (i.e., completing this future) are handled on the event loop's executor,
-              // so they won't be handled concurrently
-              if (ctx.channel().isOpen()) {
-                requestTimeoutHandler.foreach(ctx.pipeline().remove)
-                result match {
-                  case Success(serverResponse) =>
-                    val _ = pendingResponses.dequeue()
-                    try {
-                      responseCompletedPromise = Some(handleResponse(ctx, req, serverResponse))
-                      Success(())
-                    } catch {
-                      case NonFatal(ex) =>
-                        responseCompletedPromise = Some(writeError500(req, ex))
-                        Failure(ex)
-                    }
-                  case Failure(NonFatal(ex)) =>
-                    responseCompletedPromise = Some(writeError500(req, ex))
-                    Failure(ex)
-                  case Failure(fatalException) => Failure(fatalException)
-                }
-              } else {
-                // pendingResponses is already dequeued because the channel is closed
-                result match {
-                  case Success(serverResponse) =>
-                    val e = new RuntimeException("Client disconnected, request timed out, or request cancelled")
-                    responseCompletedPromise = Some(handleResponseWhenChannelClosed(ctx, serverResponse, e))
-                    logger.debug(
-                      "Response created but not sent, as the channel is closed (due to client disconnect, timeout, or cancellation)."
-                    )
-                    Success(())
-                  case Failure(e) => Failure(e)
-                }
-              }
-            } finally {
-              val _ = releaseReq()
-
-              responseCompletedPromise match {
-                case Some(p) => val _ = p.addListener((_: ChannelFuture) => requestCompleted(ctx))
-                case None    => requestCompleted(ctx)
-              }
-
-              // #4539: if the request body was never subscribed to, we need to discard it safely
-              // Doing so by subscribing & immediately cancelling the subscription.
-              // If a response was created, we should check the subscription status only after the response body is
-              // fully produced, as creating the response might at some point use the request body.
-              req match {
-                case r: TapirStreamedHttpRequest =>
-                  responseCompletedPromise match {
-                    case Some(p) =>
-                      val _ = p.addListener({ (_: ChannelFuture) =>
-                        if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
-                      })
-                    case None => if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
-                  }
-                case _ => // non-streaming type of request - do nothing - request body is already read in full
-              }
-            }
-          }(using eventLoopContext)
+        val (responseWritten, outcome) =
+          try writeResponse(ctx, req, result, requestTimeoutHandler)
+          catch {
+            case NonFatal(e)  => (None, Failure(e))
+            case e: Throwable => cleanUp(None); throw e
+          }
+        cleanUp(responseWritten)
+        outcome
       }(using eventLoopContext)
-    }
+    }(using eventLoopContext)
+  }
 
-    if (isShuttingDown.get()) {
-      if (requestsInFlight == 0) {
-        logger.info("Rejecting request, server is shutting down")
-        writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
-      } else {
-        // A pipelined request: a 503 can't be written before the responses to the earlier requests. Instead, the request is dropped, and
-        // the connection is closed once those responses are sent.
-        logger.debug("Dropping a pipelined request, server is shutting down")
-        request match {
-          case r: StreamedHttpRequest => r.subscribe(new CancellingSubscriber)
-          case _                      => // the body is released by SimpleChannelInboundHandler
+  /** @return
+    *   the running response, and a function cancelling it. If the route can't be started, the response fails.
+    */
+  private def startRoute(ctx: ChannelHandlerContext, req: HttpRequest): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
+    try {
+      unsafeRunAsync { () =>
+        try route(NettyServerRequest(req, ctx)).map(_.getOrElse(ServerResponse.notFound))
+        catch {
+          case e: IllegalArgumentException if e.getMessage.startsWith("URLDecoder:") =>
+            logger.debug(s"Invalid request URL: ${req.uri()}", e)
+            me.unit(ServerResponse[NettyResponse](StatusCode.BadRequest, Nil, None, None))
         }
       }
-    } else {
-      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't
-      // upload bodies that are then discarded (#5503, see TapirHttpStreamsServerHandler)
-      request match {
-        case full: FullHttpRequest =>
-          val req = full.retain()
-          runRoute(req, () => req.release())
-        case req: TapirStreamedHttpRequest => runRoute(req)
-        case req: StreamedHttpRequest      =>
-          // from a custom pipeline with the plain `HttpStreamsServerHandler`: tracking the request body subscription status to discard it
-          // safely, if it's never used; validating the body's length
-          runRoute(new TapirStreamedHttpRequest(req))
-        case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
-      }
-
-      ()
+    } catch {
+      // e.g. when the effect's runtime is shut down, or when a route which is run eagerly throws: answered with a 500
+      case NonFatal(e) => (Future.failed(e), () => Future.unit)
     }
+
+  /** Writes the response, or a 500 if the route failed. If the channel is closed, the response is only released.
+    *
+    * @return
+    *   completed once the response is written (`None` if nothing is written), and the outcome of handling the request
+    */
+  private def writeResponse(
+      ctx: ChannelHandlerContext,
+      req: HttpRequest,
+      result: Try[ServerResponse[NettyResponse]],
+      requestTimeoutHandler: Option[ChannelHandler]
+  ): (Option[ChannelFuture], Try[Unit]) =
+    // #4131: the channel might be closed if the request timed out. Both timeout & response-ready events are handled on the event loop, so
+    // they won't be handled concurrently.
+    if (ctx.channel().isOpen()) {
+      requestTimeoutHandler.foreach(ctx.pipeline().remove)
+      result.flatMap(serverResponse => Try(handleResponse(ctx, req, serverResponse))) match {
+        case Success(written)     => (Some(written), Success(()))
+        case Failure(NonFatal(e)) => (Some(writeError500(ctx, req, e)), Failure(e))
+        case Failure(e)           => (None, Failure(e))
+      }
+    } else {
+      result match {
+        case Success(serverResponse) =>
+          val e = new RuntimeException("Client disconnected, request timed out, or request cancelled")
+          val released = handleResponseWhenChannelClosed(ctx, serverResponse, e)
+          logger.debug("Response created but not sent, as the channel is closed (due to client disconnect, timeout, or cancellation).")
+          (Some(released), Success(()))
+        case Failure(e) => (None, Failure(e))
+      }
+    }
+
+  private def writeError500(ctx: ChannelHandlerContext, req: HttpRequest, reason: Throwable): ChannelFuture = {
+    logger.error("Error while processing the request", reason)
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+    res.handleCloseAndKeepAliveHeaders(req)
+    val written = ctx.writeAndFlush(res)
+    written.closeIfNeeded(req)
+    written
+  }
+
+  private def afterResponseWritten(responseWritten: Option[ChannelFuture])(f: => Unit): Unit = responseWritten match {
+    case Some(written) => val _ = written.addListener((_: ChannelFuture) => f)
+    case None          => f
+  }
+
+  // #4539: a request body which was never subscribed to is discarded safely, by subscribing & immediately cancelling the subscription. This
+  // is checked only once the response is written, as producing the response might use the request body.
+  private def discardBodyIfUnused(req: HttpRequest): Unit = req match {
+    case r: TapirStreamedHttpRequest if !r.wasSubscribed => r.subscribe(new CancellingSubscriber)
+    case _                                               => // the body is already read in full, or used by the route
   }
 
   private def handleResponse(ctx: ChannelHandlerContext, req: HttpRequest, serverResponse: ServerResponse[NettyResponse]): ChannelPromise =
@@ -363,15 +370,21 @@ class NettyServerHandler[F[_]](
 
       },
       wsHandler = (responseContent) => {
-        if (isWsHandshake(req))
-          initWsPipeline(ctx, responseContent, req)
-        else {
-          val buf = Unpooled.wrappedBuffer("Incorrect Web Socket handshake".getBytes)
-          val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, buf)
-          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes())
+        def reject(res: FullHttpResponse): Unit = {
+          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
           res.handleCloseAndKeepAliveHeaders(req)
           ctx.writeAndFlush(res, responseContent.channelPromise).closeIfNeeded(req)
         }
+        val handshakerFactory = new WebSocketServerHandshakerFactory(wsUrl(req), null, false)
+        if (!isWsHandshake(req)) {
+          val buf = Unpooled.wrappedBuffer("Incorrect Web Socket handshake".getBytes)
+          reject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, buf))
+        } else if (handshakerFactory.newHandshaker(req) == null) {
+          // an unsupported version; checked here, as otherwise HttpStreamsServerHandler responds once this handler is already removed
+          val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UPGRADE_REQUIRED)
+          res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue)
+          reject(res)
+        } else initWsPipeline(ctx, responseContent, req, handshakerFactory)
       },
       noBodyHandler = channelPromise => {
         val res = new DefaultFullHttpResponse(
@@ -424,7 +437,8 @@ class NettyServerHandler[F[_]](
   private def initWsPipeline(
       ctx: ChannelHandlerContext,
       r: ReactiveWebSocketProcessorNettyResponseContent,
-      handshakeReq: HttpRequest
+      handshakeReq: HttpRequest,
+      handshakerFactory: WebSocketServerHandshakerFactory
   ) = {
     ctx.pipeline().remove(this)
     requestBodyTracker.foreach(ctx.pipeline().remove(_))
@@ -456,7 +470,7 @@ class NettyServerHandler[F[_]](
         handshakeReq.protocolVersion(),
         HttpResponseStatus.valueOf(200),
         r.processor, // the Processor (Pipe) created by Tapir interpreter will be used by HttpStreamsServerHandler
-        new WebSocketServerHandshakerFactory(wsUrl(handshakeReq), null, false)
+        handshakerFactory
       )
     )
   }

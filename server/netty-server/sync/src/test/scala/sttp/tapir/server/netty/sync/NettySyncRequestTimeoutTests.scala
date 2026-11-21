@@ -13,10 +13,15 @@ import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric}
-import sttp.tapir.server.netty.sync.{NettySyncServer, NettySyncServerOptions}
+import sttp.tapir.server.netty.sync.{NettySyncServer, NettySyncServerOptions, OxStreams}
+import sttp.tapir.server.tests.{rawSocket, sendRaw}
 import sttp.tapir.tests.Test
 import sttp.shared.Identity
 
+import ox.flow.Flow
+
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -92,5 +97,40 @@ class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebS
                 totalRequests.get() shouldBe 1
               }
             .unsafeRunSync()
+    }, {
+      val releaseStream = new CountDownLatch(1)
+      val stream = endpoint.get
+        .in("stream")
+        .out(streamBinaryBody(OxStreams)(CodecFormat.OctetStream()))
+        .handleSuccess: _ =>
+          Flow.usingEmit: emit =>
+            emit(Chunk.fromArray("a".getBytes(StandardCharsets.US_ASCII)))
+            releaseStream.await(10, TimeUnit.SECONDS).discard
+      val slow = endpoint.get.in("slow").out(stringBody).handleSuccess: _ =>
+        Thread.sleep(5000)
+        "slow"
+      val config =
+        NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
+          .requestTimeout(1.second)
+      def request(path: String) = s"GET /$path HTTP/1.1\r\nHost: localhost\r\n\r\n"
+
+      Test("close the connection when a request times out while the response to an earlier one is being written") {
+        Future.successful:
+          supervised:
+            val port = useInScope(NettySyncServer(config).addEndpoints(List(stream, slow)).start())(_.stop()).port
+            try
+              rawSocket(port)
+                .use: socket =>
+                  sendRaw(socket, (request("stream") + request("slow")).getBytes(StandardCharsets.US_ASCII)) >>
+                    IO.blocking(socket.getInputStream.readAllBytes()) // until the connection is closed
+                .map: received =>
+                  val response = new String(received, StandardCharsets.US_ASCII)
+                  (response should startWith("HTTP/1.1 200")): Unit
+                  (response should include("\r\n\r\n1\r\na\r\n")): Unit // the headers, then the first chunk
+                  // a 503 would be written only after the streamed response
+                  response should not include "503"
+                .unsafeRunSync()
+            finally releaseStream.countDown()
+      }
     }
   )
