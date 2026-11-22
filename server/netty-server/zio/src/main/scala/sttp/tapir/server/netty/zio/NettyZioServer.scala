@@ -19,7 +19,6 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 
 case class NettyZioServer[R](
     serverEndpoints: Vector[ServerEndpoint[ZioStreams, RIO[R, *]]],
@@ -137,8 +136,9 @@ case class NettyZioServer[R](
         stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown).uninterruptible.memoize
           .map(stopped => (ch.localAddress().asInstanceOf[SA], () => stopped))
       }
-      .catchAll { e =>
-        shutdownExecutors(eventLoopGroup, eventExecutor) *> ZIO.fail(e)
+      .onError { _ =>
+        // if interrupted, the bind might still complete
+        (nettyFutureToScala(channelFuture.channel().close()).ignore *> shutdownExecutors(eventLoopGroup, eventExecutor)).ignore
       }
   } yield binding
 
@@ -156,13 +156,16 @@ case class NettyZioServer[R](
       .exit
       .flatMap(drained => shutdownExecutors(eventLoopGroup, eventExecutor) *> drained.unit)
 
-  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Task[Unit] = {
-    val eventLoopGroupShutDown =
-      if (config.shutdownEventLoopGroupOnClose) ZIO.suspend(nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup)).unit)
-      else ZIO.unit
-    // no quiet period, as the event executor is used only when stopping
-    eventLoopGroupShutDown *> ZIO.suspend(nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor, Duration.Zero)).unit)
-  }
+  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Task[Unit] =
+    ZIO.suspend(
+      nettyFutureToScala(
+        NettyShutdown.shutdownExecutors(
+          Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose),
+          eventExecutor,
+          NettyShutdown.EventLoopGroupQuietPeriod
+        )
+      ).unit
+    )
 }
 
 object NettyZioServer {

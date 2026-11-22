@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.cats
 
 import cats.effect.std.Dispatcher
-import cats.effect.{Async, IO, Resource}
+import cats.effect.{Async, IO, Outcome, Resource}
 import cats.syntax.all._
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
@@ -22,7 +22,6 @@ import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 case class NettyCatsServer[F[_]: Async](
     serverEndpoints: Vector[ServerEndpoint[Fs2Streams[F] & WebSockets, F]],
@@ -106,17 +105,19 @@ case class NettyCatsServer[F[_]: Async](
         socketOverride
       )
 
-    nettyChannelFutureToScala(channelFuture)
-      .flatMap { ch =>
-        // repeated calls return the first call's result, as the executors are then shut down; uncancelable, as a cancelled first call
-        // would make `memoize` run the stop again
-        Async[F]
-          .memoize(stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown))
-          .map(stopped => (ch.localAddress().asInstanceOf[SA], () => Async[F].uncancelable(_ => stopped)))
-      }
-      .handleErrorWith { e =>
-        shutdownExecutors(eventLoopGroup, eventExecutor) >> Async[F].raiseError(e)
-      }
+    val bound = nettyChannelFutureToScala(channelFuture).flatMap { ch =>
+      // repeated calls return the first call's result, as the executors are then shut down; uncancelable, as a cancelled first call
+      // would make `memoize` run the stop again
+      Async[F]
+        .memoize(stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown))
+        .map(stopped => (ch.localAddress().asInstanceOf[SA], () => Async[F].uncancelable(_ => stopped)))
+    }
+    Async[F].guaranteeCase(bound) {
+      case Outcome.Succeeded(_) => Async[F].unit
+      case _                    =>
+        // if cancelled, the bind might still complete
+        Async[F].defer(nettyFutureToScala(channelFuture.channel().close())).attempt >> shutdownExecutors(eventLoopGroup, eventExecutor)
+    }
   }
 
   private def stop(
@@ -132,13 +133,16 @@ case class NettyCatsServer[F[_]: Async](
     Async[F].guarantee(drain.void, shutdownExecutors(eventLoopGroup, eventExecutor))
   }
 
-  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): F[Unit] = {
-    val eventLoopGroupShutDown =
-      if (config.shutdownEventLoopGroupOnClose) Async[F].defer(nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup)).void)
-      else Async[F].unit
-    // no quiet period, as the event executor is used only when stopping
-    eventLoopGroupShutDown >> Async[F].defer(nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor, Duration.Zero)).void)
-  }
+  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): F[Unit] =
+    Async[F].defer(
+      nettyFutureToScala(
+        NettyShutdown.shutdownExecutors(
+          Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose),
+          eventExecutor,
+          NettyShutdown.EventLoopGroupQuietPeriod
+        )
+      ).void
+    )
 }
 
 object NettyCatsServer {

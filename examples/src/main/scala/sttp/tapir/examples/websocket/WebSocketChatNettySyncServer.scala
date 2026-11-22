@@ -5,7 +5,7 @@
 package sttp.tapir.examples.websocket
 
 import ox.channels.{Actor, ActorRef, Channel, ChannelClosed, Default, DefaultResult, selectOrClosed}
-import ox.{ExitCode, Ox, OxApp, forkDiscard, never, releaseAfterScope, supervised}
+import ox.{ExitCode, Ox, OxApp, discard, forkDiscard, never, releaseAfterScope, supervised}
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.*
 import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
@@ -76,6 +76,5 @@ object WebSocketChatNettySyncServer extends OxApp:
   override def run(args: Vector[String])(using Ox): ExitCode =
     val chatActor = Actor.create(new ChatRoom)
     val chatServerEndpoint = chatEndpoint.handleSuccess(_ => chatProcessor(chatActor))
-    val binding = NettySyncServer().addEndpoint(chatServerEndpoint).start()
-    releaseAfterScope(binding.stop())
+    NettySyncServer().addEndpoint(chatServerEndpoint).start().discard
     never

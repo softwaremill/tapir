@@ -11,12 +11,13 @@ import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
+import sttp.tapir.server.netty.sync.internal.RequestsNotStarted
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CompletableFuture, ConcurrentHashMap, ExecutionException}
+import java.util.concurrent.{CompletableFuture, ExecutionException}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
@@ -137,7 +138,7 @@ case class NettySyncServer(
 
         outcome match
           case ServerOutcome.Stopped       => ()
-          // otherwise, the error is thrown from stop(); logging, as stop() might never be called
+          // if the scope ended, stop() might never be called, so the error is logged; otherwise, stop() throws it
           case ServerOutcome.StopFailed(e) => if scopeEnded then logger.error("Error when stopping the server", e)
           case ServerOutcome.Failed(e)     =>
             // if the server didn't start, the error is thrown from start()
@@ -190,23 +191,18 @@ case class NettySyncServer(
           serverChannel = Some(channel)
           started.complete(channel.localAddress().asInstanceOf[SA]).discard
 
-          // Ox interrupts this thread once, when the server's scope fails: while waiting for the stop, or while draining
-          var interrupted: Option[InterruptedException] = None
-          def onScopeFailed(e: InterruptedException): Unit =
-            requestsNotStarted.scopeFailed()
-            interrupted = Some(e)
-          def drain(): Try[Unit] =
-            Try(NettyShutdown.drain(channel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout).get().discard)
-
+          // Ox interrupts this thread once, when the server's scope fails: while waiting for the stop, or while draining. The scope then
+          // fails with the error which caused this, so the interruption isn't rethrown.
           try stopRequested.get().discard
-          catch case e: InterruptedException => onScopeFailed(e)
+          catch case _: InterruptedException => requestsNotStarted.scopeFailed()
+          val drain = NettyShutdown.drain(channel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          def awaitDrain(): Try[Unit] = Try(drain.get().discard)
           drained =
-            try drain()
+            try awaitDrain()
             catch
-              case e: InterruptedException =>
-                onScopeFailed(e)
-                drain() // re-running is safe, as each step is idempotent
-          interrupted.foreach(e => throw e)
+              case _: InterruptedException =>
+                requestsNotStarted.scopeFailed()
+                awaitDrain()
         })
       catch case e: Throwable => Left(e)
 
@@ -276,9 +272,9 @@ case class NettySyncServer(
   ): Unit =
     serverChannel.foreach(_.close().get().discard)
     channelGroup.close().get().discard
+    val eventLoopGroupToShutDown = Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose)
     // no quiet period, as request handling forks are done
-    if config.shutdownEventLoopGroupOnClose then NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriod = Duration.Zero).get().discard
-    NettyShutdown.shutdownExecutor(eventExecutor, quietPeriod = Duration.Zero).get().discard
+    NettyShutdown.shutdownExecutors(eventLoopGroupToShutDown, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero).get().discard
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)
@@ -291,28 +287,6 @@ object NettySyncServer:
 
   def apply(serverOptions: NettySyncServerOptions, config: NettyConfig): NettySyncServer =
     NettySyncServer(Vector.empty, Vector.empty, serverOptions, config)
-
-/** Requests passed to the server's scope, for which the server logic hasn't started yet. If the scope fails, they might never start; they
-  * are then failed, so that they're answered with a 500, instead of delaying the shutdown.
-  */
-private class RequestsNotStarted:
-  private val requests = ConcurrentHashMap.newKeySet[Promise[?]]()
-  @volatile private var failed = false
-
-  def add(request: Promise[?]): Unit =
-    requests.add(request).discard
-    // checked after adding, so that each request is failed either here, or in scopeFailed()
-    if failed then fail(request)
-
-  /** Call when the server logic starts, or when the request is cancelled. */
-  def remove(request: Promise[?]): Unit = requests.remove(request).discard
-
-  def scopeFailed(): Unit =
-    failed = true
-    requests.forEach(fail)
-
-  private def fail(request: Promise[?]): Unit =
-    request.tryFailure(new IllegalStateException("The server's scope failed before handling the request")).discard
 
 private enum ServerOutcome:
   case Stopped

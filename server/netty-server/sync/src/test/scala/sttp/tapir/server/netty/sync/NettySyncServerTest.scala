@@ -31,6 +31,7 @@ import java.util.UUID
 import java.util.concurrent.{CompletableFuture, CountDownLatch, TimeUnit}
 import scala.util.{Random, Success, Try}
 import sttp.tapir.server.netty.OxServerSentEvents.parseBytesToSSE
+import sttp.tapir.server.netty.sync.internal.RequestsNotStarted
 
 class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
@@ -47,7 +48,6 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       backend,
       new NettySyncTestServerInterpreter(eventLoopGroup, interruptServerLogicWhenRequestCancelled = false)
     )
-    val sleeper: Sleeper[Identity] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
     val webSocketTests = new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
       override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
@@ -57,7 +57,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
     val tests =
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
         .tests() ++
-        new ServerGracefulShutdownTests(createServerTest, sleeper).tests() ++
+        new ServerGracefulShutdownTests(createServerTest).tests() ++
         new ServerStreamingTests(createServerTest).tests(OxStreams)(_.runDrain()) ++
         webSocketTests.tests() ++
         webSocketTests.gracefulShutdownTests(_ => Flow.tick(100.millis, "tick")) ++
@@ -68,7 +68,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         expectContinueTests(createServerTest, eventLoopGroup) ++
         List(scopeEndTest(eventLoopGroup)) ++
         fatalErrorTests(eventLoopGroup) ++
-        List(quietPeriodTest, startFailureTest(eventLoopGroup), requestsNotStartedTest)
+        List(quietPeriodTest, threadLeakTest(eventLoopGroup), startFailureTest(eventLoopGroup), requestsNotStartedTest)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -124,7 +124,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       ) { stopServer => (_, baseUri) =>
         rawSocket(baseUri.port.get).use { socket =>
           for {
-            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            _ <- sendRaw(socket, rawGet())
             response <- readRawResponse(socket)
             runningStop <- stopServer.start
             afterStop <- IO.blocking(socket.getInputStream.read())
@@ -141,13 +141,11 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .handleSuccess(_ => (in: Flow[String]) => in),
         "respond with 426 to a web socket handshake with an unsupported version, and handle later requests on the same connection"
       ) { (_, baseUri) =>
-        val handshake = "GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
-          "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 99\r\n\r\n"
         rawSocket(baseUri.port.get).use { socket =>
           for {
-            _ <- sendRaw(socket, handshake.getBytes(StandardCharsets.US_ASCII))
+            _ <- sendRaw(socket, RawWebSocket.handshake(version = 99))
             response1 <- readRawResponseWithHeaders(socket)
-            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            _ <- sendRaw(socket, rawGet())
             response2 <- readRawResponse(socket)
           } yield {
             (response1._1 shouldBe 426): Unit
@@ -164,12 +162,11 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .handleSuccess(fail => if fail then throw new LinkageError("boom") else "ok"),
         "respond with 500 to a request failing with a fatal error, and handle later requests on the same connection"
       ) { (_, baseUri) =>
-        def request(fail: Boolean) = s"GET /?fail=$fail HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
         rawSocket(baseUri.port.get).use { socket =>
           for {
-            _ <- sendRaw(socket, request(fail = true))
+            _ <- sendRaw(socket, rawGet("/?fail=true"))
             response1 <- readRawResponse(socket)
-            _ <- sendRaw(socket, request(fail = false))
+            _ <- sendRaw(socket, rawGet("/?fail=false"))
             response2 <- readRawResponse(socket)
           } yield List(response1, response2) shouldBe List((500, ""), (200, "ok"))
         }
@@ -188,11 +185,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .send(backend)
           .map(_.body.length shouldBe 10 * 1024 * 1024)
       }, {
+        val started = new CountDownLatch(1)
         val interrupted = new CountDownLatch(1)
         createServerTest.testServerLogic(
           endpoint.get
             .out(stringBody)
             .handleSuccess { _ =>
+              started.countDown()
               try
                 Thread.sleep(15000)
                 "done"
@@ -202,13 +201,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
                   throw e
             },
           "client disconnecting interrupts the server logic"
-        ) { (backend, baseUri) =>
-          basicRequest
-            .get(uri"$baseUri")
-            .readTimeout(300.millis)
-            .send(backend)
-            .attempt
-            .map(_ => interrupted.await(5, TimeUnit.SECONDS) shouldBe true)
+        ) { (_, baseUri) =>
+          for {
+            startedBeforeDisconnect <- rawSocket(baseUri.port.get).use { socket =>
+              sendRaw(socket, rawGet()) >> IO.blocking(started.await(10, TimeUnit.SECONDS))
+            }
+            wasInterrupted <- IO.blocking(interrupted.await(10, TimeUnit.SECONDS))
+          } yield (startedBeforeDisconnect, wasInterrupted) shouldBe ((true, true))
         }
       }
     )
@@ -283,6 +282,14 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       stopMillis should be < 2000L
     }
 
+  def threadLeakTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
+      val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+      eventExecutorThreadsLeftBy(IO.blocking(supervised(NettySyncServer(config).start().stop())))
+        .map(_ shouldBe empty)
+        .unsafeToFuture()
+    }
+
   /** Sync-only: with server logic run in forks which aren't interrupted, their failure fails the server's scope. */
   def fatalErrorTests(eventLoopGroup: NioEventLoopGroup): List[Test] =
     val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = false)
@@ -347,9 +354,10 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           val response = scala.concurrent.Promise[Response[Either[String, String]]]()
           // not using IO or Future, which don't complete on fatal errors
           val stopResult = new CompletableFuture[Unit]()
+          var requestArrived = false
           val (scopeError, _) = runServer(failing) { binding =>
             response.completeWith(send(binding.port))
-            requestReceived.await(10, TimeUnit.SECONDS).discard
+            requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
             Thread.startVirtualThread { () =>
               try stopResult.complete(binding.stop()).discard
               catch case e: Throwable => stopResult.completeExceptionally(e).discard
@@ -357,6 +365,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
             ServerGracefulShutdownTests.awaitConnectionsRefused(binding.port).timeout(5.seconds).unsafeRunSync()
             failRequest.countDown()
           }
+          assert(requestArrived)
           scopeError shouldBe Some(error)
           Try(stopResult.get(15, TimeUnit.SECONDS)).failed.map(_.getCause.getCause) shouldBe Success(error)
           response.future.map(_.code shouldBe StatusCode.InternalServerError)
@@ -373,11 +382,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         val failing = endpoint.get.in("fail").out(stringBody).handleSuccess(_ => throw error)
         Test("When the server's scope fails, the requests which it interrupts get a 500") {
           val slowResponse = scala.concurrent.Promise[Response[Either[String, String]]]()
+          var slowArrived = false
           val (scopeError, _) = runServer(slow, failing) { binding =>
             slowResponse.completeWith(send(binding.port, "slow"))
-            slowReceived.await(10, TimeUnit.SECONDS).discard
+            slowArrived = slowReceived.await(10, TimeUnit.SECONDS)
             send(binding.port, "fail").discard
           }
+          assert(slowArrived)
           scopeError shouldBe Some(error)
           slowResponse.future.map(_.code shouldBe StatusCode.InternalServerError)
         }

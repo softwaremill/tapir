@@ -4,23 +4,23 @@ import io.netty.channel.{ChannelDuplexHandler, ChannelFuture, ChannelFutureListe
 import io.netty.handler.codec.http.{HttpResponse, HttpResponseStatus}
 import io.netty.handler.codec.http.websocketx.{CloseWebSocketFrame, WebSocketCloseStatus, WebSocketFrame}
 import io.netty.util.ReferenceCountUtil
-import sttp.tapir.server.netty.internal.NettyServerHandler
+import sttp.tapir.server.netty.internal.NettyShutdown
 
 import java.nio.channels.ClosedChannelException
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Closes a web socket with a 1001 (Going Away) close frame, when the server is shutting down (see
-  * [[NettyServerHandler.ServerShuttingDown]]). Once any close frame is sent, drops further outgoing frames, and closes the connection when
-  * the client's close frame arrives. Should be placed before all handlers which write web socket frames, and the handshake response.
+/** Closes a web socket with a 1001 (Going Away) close frame, when the server is shutting down (see [[NettyShutdown.ServerShuttingDown]]).
+  * Once any close frame is sent, drops further outgoing frames, and closes the connection when the client's close frame arrives. Should be
+  * placed before all handlers which write web socket frames, and the handshake response.
   */
-class WebSocketShutdownHandler(isShuttingDown: AtomicBoolean) extends ChannelDuplexHandler {
+private[netty] class WebSocketShutdownHandler(isShuttingDown: AtomicBoolean) extends ChannelDuplexHandler {
   private var handshakeSent = false
   private var closeSent: Option[ChannelFuture] = None
 
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = evt match {
     // before the handshake response, a close frame can't be encoded yet; it's then sent along with that response
-    case NettyServerHandler.ServerShuttingDown => if (handshakeSent) sendGoingAway(ctx)
-    case _                                     => super.userEventTriggered(ctx, evt)
+    case NettyShutdown.ServerShuttingDown => if (handshakeSent) sendGoingAway(ctx)
+    case _                                => super.userEventTriggered(ctx, evt)
   }
 
   override def write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise): Unit = msg match {

@@ -535,7 +535,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         val port = baseUri.port.get
         rawSocket(port).use { socket =>
           for {
-            _ <- sendRaw(socket, RawWebSocket.handshake)
+            _ <- sendRaw(socket, RawWebSocket.handshake())
             _ <- IO.blocking(handshakeReceived.await(10, TimeUnit.SECONDS))
             runningStop <- stopServer.start
             _ <- ServerGracefulShutdownTests.awaitConnectionsRefused(port).timeout(5.seconds)
@@ -555,11 +555,11 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
 }
 
 /** For tests which need to see when exactly the server sends frames, or closes the connection. */
-private object RawWebSocket {
+object RawWebSocket {
   val CloseOpcode = 0x8
 
-  val handshake: Array[Byte] = ("GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
-    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n").getBytes(StandardCharsets.US_ASCII)
+  def handshake(version: Int = 13): Array[Byte] = ("GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
+    s"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: $version\r\n\r\n").getBytes(StandardCharsets.US_ASCII)
 
   /** A masked close frame, without a payload. */
   val clientClose: Array[Byte] = Array[Byte]((0x80 | CloseOpcode).toByte, 0x80.toByte, 0, 0, 0, 0)

@@ -81,13 +81,12 @@ object NettySyncServerRunner {
     val declaredHost = "0.0.0.0"
 
     supervised {
-      val serverBinding: NettySyncServerBinding = useInScope(
+      val serverBinding: NettySyncServerBinding =
         NettySyncServer(NettySyncServerOptions.customiseInterceptors.options)
           .port(declaredPort)
           .host(declaredHost)
           .addEndpoints(wsServerEndpoint :: endpoints)
           .start()
-      )(_.stop())
       println(s"Netty running with binding: $serverBinding")
       never
     }

@@ -82,7 +82,7 @@ When a server is stopped, e.g. using the binding's `stop()` method, it:
 * sends web sockets a close frame with status 1001 (Going Away). Frames which
   the server logic sends after it are dropped. Once the client answers the
   close frame, the connection is closed, and the web socket's pipe is
-  interrupted
+  stopped
 * once all connections are closed, or the graceful shutdown timeout passes (see
   [below](#server-socket-configuration)), closes the remaining connections, and
   releases the server's resources
@@ -133,7 +133,7 @@ customise the server socket, such as:
 * connection timeout
 * linger timeout
 * graceful shutdown timeout: how long a stopped server waits for in-flight
-  requests to complete, 10 seconds by default; see
+  requests and web sockets to finish, 10 seconds by default; see
   [graceful shutdown](#graceful-shutdown)
 * server header
 * maximum number of connections
@@ -158,7 +158,8 @@ also bounds how long the client has to send the body: keep it higher than your
 longest upload, and lower than `idleTimeout`. When exceeded, an empty response
 with `Connection: close` is sent and the connection is closed - `503` if the
 request had been received in full or the client awaits `100 Continue`, `408` if
-the client stalled sending the body.
+the client stalled sending the body. If a response to an earlier request on the
+connection is still being sent, the connection is only closed.
 Ignored for Web Sockets, once the handshake has been established.
 
 ## Web sockets

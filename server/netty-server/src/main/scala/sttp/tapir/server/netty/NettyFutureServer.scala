@@ -14,7 +14,6 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 case class NettyFutureServer(
@@ -125,13 +124,14 @@ case class NettyFutureServer(
       NettyShutdown.drain(serverChannel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
     ).transformWith(drained => shutdownExecutors(eventLoopGroup, eventExecutor).flatMap(_ => Future.fromTry(drained.map(_ => ()))))
 
-  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Future[Unit] = {
-    val eventLoopGroupShutDown =
-      if (config.shutdownEventLoopGroupOnClose) nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup)).map(_ => ())
-      else Future.unit
-    // no quiet period, as the event executor is used only when stopping
-    eventLoopGroupShutDown.flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor, Duration.Zero)).map(_ => ()))
-  }
+  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Future[Unit] =
+    nettyFutureToScala(
+      NettyShutdown.shutdownExecutors(
+        Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose),
+        eventExecutor,
+        NettyShutdown.EventLoopGroupQuietPeriod
+      )
+    ).map(_ => ())
 }
 
 object NettyFutureServer {

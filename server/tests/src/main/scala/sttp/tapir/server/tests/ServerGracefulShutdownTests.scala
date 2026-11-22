@@ -17,45 +17,14 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.duration._
 
-class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE], sleeper: Sleeper[F])(
-    implicit m: MonadError[F]
+class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit
+    m: MonadError[F]
 ) extends EitherValues {
   import createServerTest._
   import ServerGracefulShutdownTests._
 
   def tests(): List[Test] = List(
     {
-      // Released by the server logic once it starts handling the request, so the test triggers shutdown only after
-      // the request is genuinely in-flight. Relying on a fixed sleep instead races under load: the stop could begin
-      // before the request reaches the server, which then aborts it and fails the test.
-      // The graceful-shutdown timeout is kept well above the request duration: the server force-closes in-flight
-      // requests once the timeout elapses, and a tight margin (e.g. 3s of work vs a 4s timeout) flakes on a loaded
-      // CI runner where the sleep and response write drift past it. A larger timeout doesn't slow the happy path -
-      // the stop returns as soon as the request's connection closes, not when the timeout elapses.
-      val requestReceived = new CountDownLatch(1)
-      testServerLogicWithStop(
-        endpoint
-          .out(plainBody[String])
-          .serverLogic { _ =>
-            m.eval(requestReceived.countDown())
-              .flatMap(_ => sleeper.sleep(2.seconds))
-              .flatMap(_ => pureResult("processing finished".asRight[Unit]))
-          },
-        "Server waits for long-running request to complete within timeout",
-        gracefulShutdownTimeout = Some(10.seconds)
-      ) { (stopServer) => (backend, baseUri) =>
-        (for {
-          runningRequest <- basicRequest.get(uri"$baseUri").send(backend).start
-          requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
-          runningStop <- stopServer.start
-          result <- runningRequest.join.attempt
-          _ <- runningStop.joinWithNever
-        } yield {
-          (requestArrived shouldBe true): Unit
-          result.value.isSuccess shouldBe true
-        })
-      }
-    }, {
       val requestReceived = new CountDownLatch(1)
       val releaseRequest = new CountDownLatch(1)
       testServerLogicWithStop(
@@ -96,7 +65,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       // HTTP clients don't expose when the server closes a pooled connection
       rawSocket(baseUri.port.get).use { socket =>
         for {
-          _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+          _ <- sendRaw(socket, rawGet())
           response <- readRawResponse(socket)
           // in the background, as stopping the netty-sync server waits until the connection is closed
           runningStop <- stopServer.start
@@ -123,13 +92,12 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         gracefulShutdownTimeout = Some(30.seconds)
       ) { (stopServer) => (_, baseUri) =>
         val port = baseUri.port.get
-        def request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
         // with a body, which isn't read
         def requestDuringShutdown =
           "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nhello".getBytes(StandardCharsets.US_ASCII)
         rawSocket(port).use { socket =>
           for {
-            _ <- sendRaw(socket, request ++ request)
+            _ <- sendRaw(socket, rawGet() ++ rawGet())
             requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
             runningStop <- stopServer.start
             _ <- awaitConnectionsRefused(port).timeout(5.seconds)
@@ -164,7 +132,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         val port = baseUri.port.get
         rawSocket(port).use { socket =>
           for {
-            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            _ <- sendRaw(socket, rawGet())
             firstByte <- IO.blocking(socket.getInputStream.read()) // the response is being written
             runningStop <- stopServer.start
             _ <- awaitConnectionsRefused(port).timeout(5.seconds)
@@ -193,16 +161,16 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       ) { (stopServer) => (_, baseUri) =>
         val port = baseUri.port.get
         (for {
-          runningStop <- rawSocket(port).use { socket =>
+          arrivedAndStop <- rawSocket(port).use { socket =>
             for {
-              _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
-              _ <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
+              _ <- sendRaw(socket, rawGet())
+              requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
               runningStop <- stopServer.start
               _ <- awaitConnectionsRefused(port).timeout(5.seconds)
-            } yield runningStop
+            } yield (requestArrived, runningStop)
           }
-          stopped <- runningStop.joinWithNever.timeout(10.seconds).attempt
-        } yield stopped shouldBe Right(())).guarantee(IO(releaseRequest.countDown()))
+          stopped <- arrivedAndStop._2.joinWithNever.timeout(10.seconds).attempt
+        } yield (arrivedAndStop._1, stopped) shouldBe ((true, Right(())))).guarantee(IO(releaseRequest.countDown()))
       }
     }, {
       val requestReceived = new CountDownLatch(1)
@@ -220,12 +188,13 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       ) { (stopServer) => (_, baseUri) =>
         rawSocket(baseUri.port.get).use { socket =>
           (for {
-            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
-            _ <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
+            _ <- sendRaw(socket, rawGet())
+            requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
             runningStop <- stopServer.start
             afterStop <- IO.blocking(socket.getInputStream.read()).timed
             _ <- runningStop.joinWithNever.timeout(5.seconds)
           } yield {
+            (requestArrived shouldBe true): Unit
             (afterStop._2 shouldBe -1): Unit // no response
             afterStop._1 should be < 5.seconds
           }).guarantee(IO(releaseRequest.countDown()))
@@ -248,10 +217,9 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         gracefulShutdownTimeout = Some(30.seconds)
       ) { (stopServer) => (_, baseUri) =>
         val port = baseUri.port.get
-        def request(fail: Boolean) = s"GET /?fail=$fail HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
         rawSocket(port).use { socket =>
           for {
-            _ <- sendRaw(socket, request(fail = true) ++ request(fail = false))
+            _ <- sendRaw(socket, rawGet("/?fail=true") ++ rawGet("/?fail=false"))
             requestsArrived <- IO.blocking(requestsReceived.await(10, TimeUnit.SECONDS))
             runningStop <- stopServer.start
             _ <- awaitConnectionsRefused(port).timeout(5.seconds)

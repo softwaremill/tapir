@@ -63,17 +63,15 @@ class NettyServerHandler[F[_]](
   // in.
   private var lastResponseSent: Future[Unit] = Future.unit
 
-  // We keep track of the cancellation tokens for all the requests in flight. This gives us
-  // observability into the number of requests in flight and the ability to cancel them all
-  // if the connection gets closed.
+  // Cancel the routes which are still running; all are called when the connection closes.
   private val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
-  // connection is closed along with the response. A plain var, as it's only touched on the event loop.
+  // connection is closed along with the response.
   private var requestTimeoutHandled = false
 
   // Requests received, for which the response isn't fully sent yet. When the server is shutting down, the connection is closed once this
-  // drops to 0. A plain var, as it's only touched on the event loop.
+  // drops to 0.
   private var requestsInFlight = 0
 
   // Requests received, for which writing the response hasn't started yet. When the server is shutting down, only the last response
@@ -178,7 +176,7 @@ class NettyServerHandler[F[_]](
             val _ = ctx.close()
           case _ => ()
         }
-      case NettyServerHandler.ServerShuttingDown =>
+      case NettyShutdown.ServerShuttingDown =>
         if (requestsInFlight == 0) {
           logger.debug("Closing idle connection, as the server is shutting down")
           val _ = ctx.close()
@@ -559,12 +557,4 @@ class NettyServerHandler[F[_]](
       }
     }
   }
-}
-
-object NettyServerHandler {
-
-  /** A user event, fired on all connections when the server starts shutting down. Idle HTTP connections are then closed, and web sockets
-    * get a close frame.
-    */
-  case object ServerShuttingDown
 }

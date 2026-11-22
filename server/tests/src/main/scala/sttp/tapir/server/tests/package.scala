@@ -28,6 +28,8 @@ package object tests {
       socket
     })
 
+  def rawGet(path: String = "/"): Array[Byte] = s"GET $path HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
+
   def sendRaw(socket: Socket, bytes: Array[Byte]): IO[Unit] =
     IO.blocking {
       socket.getOutputStream.write(bytes)
@@ -65,6 +67,17 @@ package object tests {
         }
 
     (statusCode, headers, new String(body, StandardCharsets.UTF_8))
+  }
+
+  /** Runs `run`, returning the threads of Netty's `DefaultEventExecutor`s which it starts, and which are still alive 5s after it ends. */
+  def eventExecutorThreadsLeftBy(run: IO[Any]): IO[Set[Thread]] = {
+    def eventExecutorThreads(): Set[Thread] =
+      Thread.getAllStackTraces.keySet.toArray(new Array[Thread](0)).filter(_.getName.startsWith("defaultEventExecutor")).toSet
+    for {
+      before <- IO(eventExecutorThreads())
+      _ <- run
+      leftAlive <- IO.blocking((eventExecutorThreads() -- before).filter { t => t.join(5000); t.isAlive })
+    } yield leftAlive
   }
 
   private def readRawLine(in: InputStream): String = {

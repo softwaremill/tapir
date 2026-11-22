@@ -5,6 +5,7 @@ import cats.syntax.all._
 import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.handler.codec.http.{DefaultFullHttpRequest, FullHttpResponse, HttpHeaderNames, HttpMethod, HttpVersion}
 import io.netty.util.concurrent.{DefaultEventExecutorGroup, GlobalEventExecutor}
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
@@ -42,7 +43,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
 
           val tests =
             new AllServerTests(createServerTest, interpreter, backend, multipart = true, partOtherHeaderSupport = false).tests() ++
-              new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests() ++
+              new ServerGracefulShutdownTests(createServerTest).tests() ++
               new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
               additionalTests(backend, eventLoopGroup) ++
@@ -103,7 +104,6 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           secondReceived.countDown()
           throw new RuntimeException("boom")
         }
-      def request(path: String) = s"GET /$path HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
 
       Resource
         .make(IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).addRoute(route).start())))(server =>
@@ -112,12 +112,16 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .flatMap(server => rawSocket(server.port))
         .use { socket =>
           for {
-            _ <- sendRaw(socket, request("first") ++ request("second"))
-            _ <- IO.blocking(secondReceived.await(10, TimeUnit.SECONDS)) // the second request is handled while the first one is in flight
+            _ <- sendRaw(socket, rawGet("/first") ++ rawGet("/second"))
+            // the second request is handled while the first one is in flight
+            secondArrived <- IO.blocking(secondReceived.await(10, TimeUnit.SECONDS))
             _ <- IO(releaseFirst.success(()))
             response1 <- readRawResponse(socket)
             response2 <- readRawResponse(socket)
-          } yield List(response1, response2) shouldBe List((200, ""), (500, ""))
+          } yield {
+            (secondArrived shouldBe true): Unit
+            List(response1, response2) shouldBe List((200, ""), (500, ""))
+          }
         }
         .unsafeToFuture()
     },
@@ -135,37 +139,56 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
     Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
       import cats.effect.unsafe.implicits.global
 
-      def eventExecutorThreads(): Set[Thread] =
-        Thread.getAllStackTraces.keySet.toArray(new Array[Thread](0)).filter(_.getName.startsWith("defaultEventExecutor")).toSet
-      val threadsBefore = eventExecutorThreads()
       val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      IO.fromFuture(IO.delay(NettyFutureServer(config)(using ec).start()))
-        .flatMap(server => IO.fromFuture(IO.delay(server.stop())))
-        .flatMap(_ => IO.blocking((eventExecutorThreads() -- threadsBefore).filter(t => { t.join(5000); t.isAlive })))
+      eventExecutorThreadsLeftBy(
+        IO.fromFuture(IO.delay(NettyFutureServer(config)(using ec).start())).flatMap(server => IO.fromFuture(IO.delay(server.stop())))
+      )
         .map(_ shouldBe empty)
         .unsafeToFuture()
     },
     Test("the server handler fails, if it doesn't run on the channel's event loop") {
-      implicit val m: FutureMonad = new FutureMonad()(ec)
       val executorGroup = new DefaultEventExecutorGroup(1)
       val channel = new EmbeddedChannel()
       try {
-        val handler = new NettyServerHandler[Future](
-          Route.empty,
-          block => (block(), () => Future.unit),
-          new DefaultChannelGroup(GlobalEventExecutor.INSTANCE),
-          new AtomicBoolean(false),
-          NettyConfig.default
-        )
-        channel.pipeline().addLast(executorGroup, handler)
+        channel.pipeline().addLast(executorGroup, serverHandler(new AtomicBoolean(false), ec))
         executorGroup.submit(new Runnable { override def run(): Unit = () }).sync() // handlerAdded has run
         Future.successful(Try(channel.checkException()).failed.get.getCause shouldBe an[IllegalStateException])
       } finally {
         channel.finishAndReleaseAll(): Unit
         executorGroup.shutdownGracefully(): Unit
       }
+    },
+    Test("the server handler responds to a request with a 503 and closes the connection, if the server is shutting down") {
+      val isShuttingDown = new AtomicBoolean(false)
+      val channel = new EmbeddedChannel(serverHandler(isShuttingDown, ec))
+      try {
+        isShuttingDown.set(true)
+        channel.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")): Unit
+        val response = channel.readOutbound[FullHttpResponse]()
+        try {
+          Future.successful(
+            (response.status().code(), response.headers().get(HttpHeaderNames.CONNECTION), channel.isOpen) shouldBe ((503, "close", false))
+          )
+        } finally { response.release(): Unit }
+      } finally { channel.finishAndReleaseAll(): Unit }
+    },
+    Test("the server handler closes a connection accepted when the server is shutting down") {
+      val channel = new EmbeddedChannel(serverHandler(new AtomicBoolean(true), ec))
+      try Future.successful(channel.isOpen shouldBe false)
+      finally { channel.finishAndReleaseAll(): Unit }
     }
   )
+
+  private def serverHandler(isShuttingDown: AtomicBoolean, ec: ExecutionContext): NettyServerHandler[Future] = {
+    implicit val m: FutureMonad = new FutureMonad()(ec)
+    new NettyServerHandler[Future](
+      Route.empty,
+      block => (block(), () => Future.unit),
+      new DefaultChannelGroup(GlobalEventExecutor.INSTANCE),
+      isShuttingDown,
+      NettyConfig.default
+    )
+  }
 
   // Netty-only: if the body isn't read, RFC 9110 lets a server either skip the 100 (as Netty does), or send it and discard the body. The
   // code is the same for all Netty interpreters, so it's tested once.
