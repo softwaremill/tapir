@@ -17,7 +17,7 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CompletableFuture, ExecutionException}
+import java.util.concurrent.{CancellationException, CompletableFuture, ExecutionException}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
@@ -80,7 +80,7 @@ case class NettySyncServer(
     *
     *   supervised {
     *     val serverBinding = server.start()
-    *     println(s"Tapir is running on port ${serverBinding.port})
+    *     println(s"Tapir is running on port ${serverBinding.port}")
     *     never
     *   }
     *   }}}
@@ -208,12 +208,14 @@ case class NettySyncServer(
 
     // closing once request-handling forks are done (interrupted if still running), so that their callbacks can still run on the event loops
     val closed = closeServer(serverChannel, eventLoopGroup, channelGroup, eventExecutor)
+    val stopErrors = List(drained, closed).flatMap(_.failed.toOption)
+    def withSuppressed(e: Throwable, others: List[Throwable]): Throwable = e.tap(e => others.foreach(e.addSuppressed))
     scopeResult match
-      case Left(e) =>
-        drained.failed.foreach(e.addSuppressed)
-        closed.failed.foreach(e.addSuppressed)
-        ServerOutcome.Failed(e)
-      case Right(_) => drained.flatMap(_ => closed).fold(ServerOutcome.StopFailed(_), _ => ServerOutcome.Stopped)
+      case Left(e)  => ServerOutcome.Failed(withSuppressed(e, stopErrors))
+      case Right(_) =>
+        stopErrors match
+          case Nil         => ServerOutcome.Stopped
+          case e :: others => ServerOutcome.StopFailed(withSuppressed(e, others))
 
   private def route(inScopeRunner: InScopeRunner): Route[Identity] =
     val endpointRoute = serverEndpoints match {
@@ -226,12 +228,13 @@ case class NettySyncServer(
       case many      => Route.combine(many)
     }
 
-  private def unsafeRunF(inScopeRunner: InScopeRunner, requestsNotStarted: RequestsNotStarted)(
+  private[sync] def unsafeRunF(inScopeRunner: InScopeRunner, requestsNotStarted: RequestsNotStarted)(
       callToExecute: () => Identity[ServerResponse[NettyResponse]]
   ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
     val scalaPromise = Promise[ServerResponse[NettyResponse]]()
 
-    val cancelled = new AtomicBoolean(false)
+    // set by whichever happens first: the server logic starting, or the request being cancelled
+    val startedOrCancelled = new AtomicBoolean(false)
     // completed only if cancellation using interruption is enabled
     val cancellableFork = new CompletableFuture[CancellableFork[Unit]]()
     requestsNotStarted.add(scalaPromise)
@@ -240,7 +243,7 @@ case class NettySyncServer(
     inScopeRunner.async {
       def run(): Unit =
         requestsNotStarted.remove(scalaPromise)
-        if !cancelled.get() then
+        if startedOrCancelled.compareAndSet(false, true) then
           try scalaPromise.trySuccess(callToExecute()).discard
           catch
             case e: Throwable =>
@@ -256,9 +259,11 @@ case class NettySyncServer(
       scalaPromise.future,
       () => {
         requestsNotStarted.remove(scalaPromise)
-        cancelled.set(true)
+        // the response must complete, so that the request is released
+        if startedOrCancelled.compareAndSet(false, true) then
+          scalaPromise.tryFailure(new CancellationException("Request cancelled")).discard
         // if the fork isn't created yet, cancels it once it is
-        cancellableFork.thenAccept(_.cancelNow()).discard
+        else cancellableFork.thenAccept(_.cancelNow()).discard
         Future.unit
       }
     )
@@ -274,13 +279,11 @@ case class NettySyncServer(
       serverChannel.foreach(_.close().get().discard)
       channelGroup.close().get().discard
     // no quiet period, as request handling forks are done
-    val shutDown = Try:
-      NettyShutdown
-        .shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero)
-        .get()
-        .discard
-    closed.failed.foreach(e => shutDown.failed.foreach(e.addSuppressed))
-    closed.flatMap(_ => shutDown)
+    NettyShutdown
+      .shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero)
+      .get()
+      .discard
+    closed
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)

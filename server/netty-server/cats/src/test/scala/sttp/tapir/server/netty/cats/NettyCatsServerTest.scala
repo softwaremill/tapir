@@ -91,11 +91,13 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
               _ <- sendRaw(socket, rawGet())
               requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
               firstStop <- binding.stop().start
-              _ <- IO.sleep(100.millis) // the request keeps the server stopping for the graceful shutdown timeout
+              // the request keeps the server stopping until the graceful shutdown timeout, and then the connection is closed
+              _ <- awaitConnectionsRefused(binding.port).timeout(5.seconds)
               _ <- firstStop.cancel
+              requestConnectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
               secondStop <- binding.stop().timeout(5.seconds).attempt
               refused <- connectionRefused(binding.port)
-            } yield (requestArrived, secondStop, refused) shouldBe ((true, Right(()), true))
+            } yield (requestArrived, requestConnectionClosed, secondStop, refused) shouldBe ((true, true, Right(()), true))
           }
         }
         .guarantee(IO(releaseRequest.countDown()))

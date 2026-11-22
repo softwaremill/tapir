@@ -89,11 +89,14 @@ class NettyZioServerTest extends TestSuite with EitherValues {
             for {
               _ <- sendRaw(socket, rawGet())
               requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
-              // the request keeps the server stopping for the graceful shutdown timeout
-              _ <- runZio(binding.stop().fork.flatMap(firstStop => ZIO.sleep(zio.Duration.fromMillis(100)) *> firstStop.interrupt))
+              firstStop <- runZio(binding.stop().forkDaemon)
+              // the request keeps the server stopping until the graceful shutdown timeout, and then the connection is closed
+              _ <- awaitConnectionsRefused(binding.port).timeout(5.seconds)
+              _ <- runZio(firstStop.interrupt)
+              requestConnectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
               secondStop <- runZio(binding.stop().timeout(zio.Duration.fromSeconds(5)))
               refused <- connectionRefused(binding.port)
-            } yield (requestArrived, secondStop, refused) shouldBe ((true, Some(()), true))
+            } yield (requestArrived, requestConnectionClosed, secondStop, refused) shouldBe ((true, true, Some(()), true))
           }
         }
         .guarantee(IO(releaseRequest.countDown()))

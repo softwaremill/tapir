@@ -28,8 +28,8 @@ import sttp.tapir.server.netty.{NettyConfig, NettySyncRequestTimeoutTests}
 import sttp.model.sse.ServerSentEvent
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import java.util.concurrent.{CompletableFuture, CountDownLatch, TimeUnit}
-import scala.util.{Random, Success, Try}
+import java.util.concurrent.{CancellationException, CompletableFuture, CountDownLatch, TimeUnit}
+import scala.util.{Failure, Random, Success, Try}
 import sttp.tapir.server.netty.OxServerSentEvents.parseBytesToSSE
 import sttp.tapir.server.netty.sync.internal.RequestsNotStarted
 
@@ -68,7 +68,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         expectContinueTests(createServerTest, eventLoopGroup) ++
         List(scopeEndTest(eventLoopGroup)) ++
         fatalErrorTests(eventLoopGroup) ++
-        List(quietPeriodTest, threadLeakTest(eventLoopGroup), startFailureTest(eventLoopGroup), requestsNotStartedTest)
+        List(
+          quietPeriodTest,
+          threadLeakTest(eventLoopGroup),
+          startFailureTest(eventLoopGroup),
+          requestsNotStartedTest,
+          cancelledBeforeStartTest
+        )
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -270,7 +276,23 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       List(started, notStarted, addedAfterFailure).map(_.isCompleted) shouldBe List(false, true, true)
     }
 
-  /** Sync-only: the other tests use a shared event loop group, which isn't shut down when the server stops. */
+  /** Otherwise, the request isn't released, as that's done once the response completes. */
+  def cancelledBeforeStartTest: Test =
+    Test("the response to a request cancelled before its server logic starts is completed") {
+      supervised {
+        val runner = inScopeRunner()
+        val unblockRunner = new CountDownLatch(1)
+        // the runner runs functions one at a time, so the server logic can't start until this one ends
+        runner.async(unblockRunner.await())
+        try
+          val (response, cancel) = NettySyncServer().unsafeRunF(runner, new RequestsNotStarted)(() => fail("Server logic started"))
+          cancel().discard
+          response.value should matchPattern { case Some(Failure(_: CancellationException)) => }
+        finally unblockRunner.countDown()
+      }
+    }
+
+  /** The other tests use a shared event loop group, which isn't shut down when the server stops. */
   def quietPeriodTest: Test =
     Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
       val stopMillis = supervised {
