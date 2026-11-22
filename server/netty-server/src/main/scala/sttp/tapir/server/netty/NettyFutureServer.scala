@@ -126,11 +126,7 @@ case class NettyFutureServer(
 
   private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Future[Unit] =
     nettyFutureToScala(
-      NettyShutdown.shutdownExecutors(
-        Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose),
-        eventExecutor,
-        NettyShutdown.EventLoopGroupQuietPeriod
-      )
+      NettyShutdown.shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor)
     ).map(_ => ())
 }
 

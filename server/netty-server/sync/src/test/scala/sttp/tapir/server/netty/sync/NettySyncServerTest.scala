@@ -272,7 +272,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
   /** Sync-only: the other tests use a shared event loop group, which isn't shut down when the server stops. */
   def quietPeriodTest: Test =
-    Test("stopping a server which uses its own event loop group shouldn't use a quiet period") {
+    Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
       val stopMillis = supervised {
         val binding = NettySyncServer().port(0).start()
         val start = System.nanoTime()
@@ -285,7 +285,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
   def threadLeakTest(eventLoopGroup: NioEventLoopGroup): Test =
     Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
       val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      eventExecutorThreadsLeftBy(IO.blocking(supervised(NettySyncServer(config).start().stop())))
+      threadsLeftBy("defaultEventExecutor")(IO.blocking(supervised(NettySyncServer(config).start().stop())))
         .map(_ shouldBe empty)
         .unsafeToFuture()
     }
@@ -330,7 +330,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           response.completeWith(send(binding.port))
         }
         scopeError shouldBe Some(error)
-        ServerGracefulShutdownTests.connectionRefused(port).unsafeRunSync() shouldBe true
+        connectionRefused(port).unsafeRunSync() shouldBe true
         response.future.map(_.code shouldBe StatusCode.InternalServerError)
       }, {
         val error = new LinkageError("boom")
@@ -362,7 +362,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
               try stopResult.complete(binding.stop()).discard
               catch case e: Throwable => stopResult.completeExceptionally(e).discard
             }.discard
-            ServerGracefulShutdownTests.awaitConnectionsRefused(binding.port).timeout(5.seconds).unsafeRunSync()
+            awaitConnectionsRefused(binding.port).timeout(5.seconds).unsafeRunSync()
             failRequest.countDown()
           }
           assert(requestArrived)
@@ -409,7 +409,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         supervised {
           val config =
             NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
-          val binding = useInScope(NettySyncServer(config).addEndpoints(es).start())(_.stop())
+          val binding = NettySyncServer(config).addEndpoints(es).start()
           Future.successful(runTest(binding.port).unsafeRunSync())
         }
       }

@@ -7,6 +7,7 @@ import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
+import sttp.tapir.endpoint
 import sttp.tapir.server.netty.NettyConfig
 import sttp.tapir.server.netty.internal.FutureUtil
 import sttp.tapir.server.tests._
@@ -45,7 +46,13 @@ class NettyZioServerTest extends TestSuite with EitherValues {
               new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(using monadError, asyncInstance).tests() ++
               new ServerGracefulShutdownTests(createServerTest).tests() ++
-              List(stopTwiceTest, quietPeriodTest, threadLeakTest(eventLoopGroup), startInterruptedTest)
+              List(
+                stopTwiceTest,
+                stopInterruptedTest(eventLoopGroup),
+                quietPeriodTest,
+                threadLeakTest(eventLoopGroup),
+                startInterruptedTest
+              )
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
@@ -64,6 +71,35 @@ class NettyZioServerTest extends TestSuite with EitherValues {
       .unsafeToFuture()
   }
 
+  private def stopInterruptedTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("interrupting stop() still stops the server, and later stop() calls succeed") {
+      val requestReceived = new CountDownLatch(1)
+      val releaseRequest = new CountDownLatch(1)
+      val blocking = endpoint.serverLogicSuccess[Task] { _ =>
+        ZIO.succeed(requestReceived.countDown()) *> ZIO.attemptBlocking(releaseRequest.await(30, TimeUnit.SECONDS)).unit
+      }
+      val config = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .withGracefulShutdownTimeout(1.second)
+      runZio(NettyZioServer[Any](config).addEndpoints(List(blocking)).start())
+        .flatMap { binding =>
+          rawSocket(binding.port).use { socket =>
+            for {
+              _ <- sendRaw(socket, rawGet())
+              requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
+              // the request keeps the server stopping for the graceful shutdown timeout
+              _ <- runZio(binding.stop().fork.flatMap(firstStop => ZIO.sleep(zio.Duration.fromMillis(100)) *> firstStop.interrupt))
+              secondStop <- runZio(binding.stop().timeout(zio.Duration.fromSeconds(5)))
+              refused <- connectionRefused(binding.port)
+            } yield (requestArrived, secondStop, refused) shouldBe ((true, Some(()), true))
+          }
+        }
+        .guarantee(IO(releaseRequest.countDown()))
+        .unsafeToFuture()
+    }
+
   // the other tests use a shared event loop group, which isn't shut down when the server stops
   private def quietPeriodTest: Test =
     Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
@@ -75,7 +111,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
   private def threadLeakTest(eventLoopGroup: NioEventLoopGroup): Test =
     Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
       val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      eventExecutorThreadsLeftBy(runZio(NettyZioServer[Any](config).start().flatMap(_.stop())))
+      threadsLeftBy("defaultEventExecutor")(runZio(NettyZioServer[Any](config).start().flatMap(_.stop())))
         .map(_ shouldBe empty)
         .unsafeToFuture()
     }

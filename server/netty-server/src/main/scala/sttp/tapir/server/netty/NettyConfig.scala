@@ -43,8 +43,8 @@ import scala.concurrent.duration._
   *   socket
   *
   * @param gracefulShutdownTimeout
-  *   If set, attempts to wait for a given time for all in-flight requests to complete, before proceeding with shutting down the server. If
-  *   `None`, closes the channels and terminates the server without waiting.
+  *   How long a stopped server waits for in-flight requests and web sockets to finish, before closing their connections; see
+  *   https://tapir.softwaremill.com/en/latest/server/netty.html#graceful-shutdown. If `None`, closes them without waiting.
   *
   * @param idleTimeout
   *   Maximum inactivity time of a given connection. If nothing is sent or received within this timeout, the connection closes. Make sure

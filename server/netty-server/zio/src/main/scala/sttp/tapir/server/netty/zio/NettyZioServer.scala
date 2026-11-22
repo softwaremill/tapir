@@ -102,11 +102,8 @@ case class NettyZioServer[R](
       case _        => NettyZioServerInterpreter(options).toRoute(serverEndpoints.toList).map(Vector(_))
     }
     routes <- ZIO.foreach(otherRoutes)(identity)
-    eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
-    eventExecutor = new DefaultEventExecutor()
-    channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
-    isShuttingDown = new AtomicBoolean(false)
-    channelFuture = {
+    // uninterruptible until the cleanup is in place
+    binding <- ZIO.uninterruptibleMask { restore =>
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
 
       val allRoutes = endpointRoute ++ routes
@@ -115,8 +112,11 @@ case class NettyZioServer[R](
         case Vector(r) => r
         case many      => Route.combine(many)
       }
-
-      NettyBootstrap[RIO[R, *]](
+      val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+      val eventExecutor = new DefaultEventExecutor()
+      val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
+      val isShuttingDown = new AtomicBoolean(false)
+      val channelFuture = NettyBootstrap[RIO[R, *]](
         config,
         new NettyServerHandler[RIO[R, *]](
           route,
@@ -128,18 +128,18 @@ case class NettyZioServer[R](
         eventLoopGroup,
         socketOverride
       )
+      restore(nettyChannelFutureToScala(channelFuture))
+        .flatMap { ch =>
+          // repeated calls return the first call's result, as the executors are then shut down; uninterruptible, as an interrupted first
+          // call would make `memoize` run the stop again
+          stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown).memoize
+            .map(stopped => (ch.localAddress().asInstanceOf[SA], () => stopped.uninterruptible))
+        }
+        .onError { _ =>
+          // if interrupted, the bind might still complete
+          (nettyFutureToScala(channelFuture.channel().close()).ignore *> shutdownExecutors(eventLoopGroup, eventExecutor)).ignore
+        }
     }
-    binding <- nettyChannelFutureToScala(channelFuture)
-      .flatMap { ch =>
-        // repeated calls return the first call's result, as the executors are then shut down; uninterruptible, so that the executors are
-        // always shut down
-        stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown).uninterruptible.memoize
-          .map(stopped => (ch.localAddress().asInstanceOf[SA], () => stopped))
-      }
-      .onError { _ =>
-        // if interrupted, the bind might still complete
-        (nettyFutureToScala(channelFuture.channel().close()).ignore *> shutdownExecutors(eventLoopGroup, eventExecutor)).ignore
-      }
   } yield binding
 
   private def stop(
@@ -159,11 +159,7 @@ case class NettyZioServer[R](
   private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Task[Unit] =
     ZIO.suspend(
       nettyFutureToScala(
-        NettyShutdown.shutdownExecutors(
-          Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose),
-          eventExecutor,
-          NettyShutdown.EventLoopGroupQuietPeriod
-        )
+        NettyShutdown.shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor)
       ).unit
     )
 }

@@ -7,6 +7,7 @@ import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
+import sttp.tapir.endpoint
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.netty.NettyConfig
 import sttp.tapir.server.netty.internal.FutureUtil
@@ -50,7 +51,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new ServerGracefulShutdownTests(createServerTest).tests() ++
             webSocketTests.tests() ++
             webSocketTests.gracefulShutdownTests(_ => fs2.Stream.awakeEvery[IO](100.millis).as("tick")) ++
-            List(stopTwiceTest, quietPeriodTest, threadLeakTest(eventLoopGroup), startCancelledTest)
+            List(stopTwiceTest, stopCancelledTest(eventLoopGroup), quietPeriodTest, threadLeakTest(eventLoopGroup), startCancelledTest)
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
@@ -69,6 +70,38 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
       .unsafeToFuture()
   }
 
+  private def stopCancelledTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("cancelling stop() still stops the server, and later stop() calls succeed") {
+      val requestReceived = new CountDownLatch(1)
+      val releaseRequest = new CountDownLatch(1)
+      val blocking = endpoint.serverLogicSuccess[IO] { _ =>
+        IO(requestReceived.countDown()) >> IO.blocking(releaseRequest.await(30, TimeUnit.SECONDS)).void
+      }
+      val config = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .withGracefulShutdownTimeout(1.second)
+      NettyCatsServer[IO](dispatcher, config)
+        .addEndpoint(blocking)
+        .start()
+        .flatMap { binding =>
+          rawSocket(binding.port).use { socket =>
+            for {
+              _ <- sendRaw(socket, rawGet())
+              requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
+              firstStop <- binding.stop().start
+              _ <- IO.sleep(100.millis) // the request keeps the server stopping for the graceful shutdown timeout
+              _ <- firstStop.cancel
+              secondStop <- binding.stop().timeout(5.seconds).attempt
+              refused <- connectionRefused(binding.port)
+            } yield (requestArrived, secondStop, refused) shouldBe ((true, Right(()), true))
+          }
+        }
+        .guarantee(IO(releaseRequest.countDown()))
+        .unsafeToFuture()
+    }
+
   // the other tests use a shared event loop group, which isn't shut down when the server stops
   private def quietPeriodTest: Test =
     Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
@@ -83,7 +116,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
   private def threadLeakTest(eventLoopGroup: NioEventLoopGroup): Test =
     Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
       val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      eventExecutorThreadsLeftBy(NettyCatsServer[IO](dispatcher, config).start().flatMap(_.stop()))
+      threadsLeftBy("defaultEventExecutor")(NettyCatsServer[IO](dispatcher, config).start().flatMap(_.stop()))
         .map(_ shouldBe empty)
         .unsafeToFuture()
     }

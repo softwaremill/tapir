@@ -74,6 +74,4 @@ enum TapirBreeds(val name: String):
     println(s"Go to: http://${binding.hostName}:${binding.port}/docs")
     println("Press any key to exit ...")
     val _ = scala.io.StdIn.readLine()
-
-    binding.stop()
   }

@@ -140,7 +140,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
       import cats.effect.unsafe.implicits.global
 
       val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      eventExecutorThreadsLeftBy(
+      threadsLeftBy("defaultEventExecutor")(
         IO.fromFuture(IO.delay(NettyFutureServer(config)(using ec).start())).flatMap(server => IO.fromFuture(IO.delay(server.stop())))
       )
         .map(_ shouldBe empty)

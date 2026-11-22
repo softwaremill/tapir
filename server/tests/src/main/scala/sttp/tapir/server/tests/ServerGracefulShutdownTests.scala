@@ -12,7 +12,6 @@ import sttp.tapir._
 import sttp.tapir.tests._
 
 import java.io.ByteArrayInputStream
-import java.net.{ConnectException, Socket}
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.duration._
@@ -21,7 +20,6 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
     m: MonadError[F]
 ) extends EitherValues {
   import createServerTest._
-  import ServerGracefulShutdownTests._
 
   def tests(): List[Test] = List(
     {
@@ -153,7 +151,8 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
           .out(plainBody[String])
           .serverLogic { _ =>
             m.eval(requestReceived.countDown())
-              .flatMap(_ => m.blocking(releaseRequest.await(10, TimeUnit.SECONDS)))
+              // longer than the stop's timeout below, so that the test fails if the stop waits for this
+              .flatMap(_ => m.blocking(releaseRequest.await(30, TimeUnit.SECONDS)))
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
         "Server stops once the client of an in-flight request disconnects during shutdown",
@@ -238,14 +237,4 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       }
     }
   )
-}
-
-object ServerGracefulShutdownTests {
-
-  /** Netty servers start draining before they stop listening, so once connections are refused, the server is draining. */
-  def awaitConnectionsRefused(port: Int): IO[Unit] =
-    (IO.sleep(100.millis) >> connectionRefused(port)).iterateUntil(identity).void
-
-  def connectionRefused(port: Int): IO[Boolean] =
-    IO.blocking(new Socket("localhost", port).close()).attempt.map(_.left.exists(_.isInstanceOf[ConnectException]))
 }

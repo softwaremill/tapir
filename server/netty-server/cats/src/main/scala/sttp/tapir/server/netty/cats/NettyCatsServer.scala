@@ -136,11 +136,7 @@ case class NettyCatsServer[F[_]: Async](
   private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): F[Unit] =
     Async[F].defer(
       nettyFutureToScala(
-        NettyShutdown.shutdownExecutors(
-          Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose),
-          eventExecutor,
-          NettyShutdown.EventLoopGroupQuietPeriod
-        )
+        NettyShutdown.shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor)
       ).void
     )
 }

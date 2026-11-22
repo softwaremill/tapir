@@ -207,7 +207,7 @@ case class NettySyncServer(
       catch case e: Throwable => Left(e)
 
     // closing once request-handling forks are done (interrupted if still running), so that their callbacks can still run on the event loops
-    val closed = Try(closeServer(serverChannel, eventLoopGroup, channelGroup, eventExecutor))
+    val closed = closeServer(serverChannel, eventLoopGroup, channelGroup, eventExecutor)
     scopeResult match
       case Left(e) =>
         drained.failed.foreach(e.addSuppressed)
@@ -263,18 +263,24 @@ case class NettySyncServer(
       }
     )
 
-  /** Closes the server's channels, and releases its resources. */
+  /** Closes the server's channels, and releases its resources, even if closing the channels fails. */
   private def closeServer(
       serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor
-  ): Unit =
-    serverChannel.foreach(_.close().get().discard)
-    channelGroup.close().get().discard
-    val eventLoopGroupToShutDown = Some(eventLoopGroup).filter(_ => config.shutdownEventLoopGroupOnClose)
+  ): Try[Unit] =
+    val closed = Try:
+      serverChannel.foreach(_.close().get().discard)
+      channelGroup.close().get().discard
     // no quiet period, as request handling forks are done
-    NettyShutdown.shutdownExecutors(eventLoopGroupToShutDown, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero).get().discard
+    val shutDown = Try:
+      NettyShutdown
+        .shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero)
+        .get()
+        .discard
+    closed.failed.foreach(e => shutDown.failed.foreach(e.addSuppressed))
+    closed.flatMap(_ => shutDown)
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)

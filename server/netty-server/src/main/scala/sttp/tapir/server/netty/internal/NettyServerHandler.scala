@@ -63,7 +63,7 @@ class NettyServerHandler[F[_]](
   // in.
   private var lastResponseSent: Future[Unit] = Future.unit
 
-  // Cancel the routes which are still running; all are called when the connection closes.
+  // Functions cancelling the routes which are still running; all are called when the connection closes.
   private val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
@@ -79,7 +79,7 @@ class NettyServerHandler[F[_]](
   private var responsesNotStarted = 0
 
   // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
-  // exceeded request timeout is always reported as 503.
+  // exceeded request timeout is always reported as 503, rather than 408.
   private var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
 
   private val logger = LoggerFactory.getLogger(getClass.getName)

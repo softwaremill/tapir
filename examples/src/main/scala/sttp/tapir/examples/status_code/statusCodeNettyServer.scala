@@ -77,6 +77,4 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     // Bind and start to accept incoming connections.
     println(s"Server started at http://${binding.hostName}:${binding.port}")
     println("Press any key to stop")
-    System.in.read()
-
-    binding.stop()
+    val _ = System.in.read()

@@ -81,22 +81,22 @@ private[netty] object NettyShutdown {
 
   private val ExecutorShutdownTimeout = 15.seconds
 
-  /** For an event loop group on which requests might still be running, e.g. past the graceful shutdown timeout, so that their cleanup still
-    * runs.
+  /** Quiet period for an event loop group on which requests might still be running, e.g. past the graceful shutdown timeout, so that their
+    * cleanup still runs.
     */
-  val EventLoopGroupQuietPeriod: FiniteDuration = 100.millis
+  private val EventLoopGroupQuietPeriod: FiniteDuration = 100.millis
 
-  /** Shuts down the server's executors. Call once the server's channels are closed.
+  /** Shuts down the server's executors: the event loop group if `shutdownEventLoopGroupOnClose` is set, and always the event executor. Call
+    * once the server's channels are closed.
     *
-    * @param eventLoopGroup
-    *   `None` if it's not to be shut down
     * @param eventLoopGroupQuietPeriod
     *   tasks submitted within this period still run (Netty's default is 2 seconds)
     */
   def shutdownExecutors(
-      eventLoopGroup: Option[EventLoopGroup],
+      eventLoopGroup: EventLoopGroup,
+      shutdownEventLoopGroupOnClose: Boolean,
       eventExecutor: EventExecutor,
-      eventLoopGroupQuietPeriod: FiniteDuration
+      eventLoopGroupQuietPeriod: FiniteDuration = EventLoopGroupQuietPeriod
   ): NettyFuture[Void] = {
     val done = GlobalEventExecutor.INSTANCE.newPromise[Void]()
     // the listeners ignore the outcome, as termination futures never fail
@@ -104,11 +104,9 @@ private[netty] object NettyShutdown {
       // no quiet period, as the event executor is used only when stopping
       val _ = shutdownGracefully(eventExecutor, Duration.Zero).addListener((_: NettyFuture[Any]) => { val _ = done.trySuccess(null) })
     }
-    eventLoopGroup match {
-      case Some(group) =>
-        val _ = shutdownGracefully(group, eventLoopGroupQuietPeriod).addListener((_: NettyFuture[Any]) => shutdownEventExecutor())
-      case None => shutdownEventExecutor()
-    }
+    if (shutdownEventLoopGroupOnClose) {
+      val _ = shutdownGracefully(eventLoopGroup, eventLoopGroupQuietPeriod).addListener((_: NettyFuture[Any]) => shutdownEventExecutor())
+    } else shutdownEventExecutor()
     done
   }
 
