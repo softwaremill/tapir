@@ -109,10 +109,8 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
   private def writePartHeaders(part: Part[?]): HttpServerResponse => Future[String] = { resp =>
     part.headers.foreach { h => resp.headers.add(h.name, h.value) }
     val partContentType = part.contentType.getOrElse("application/octet-stream")
-    val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
-    val dispositionsHeaderParts = dispositionParams.map { case (k, v) => s"""$k="$v"""" }
     resp
-      .write(s"${HttpHeaders.CONTENT_DISPOSITION}: form-data; ${dispositionsHeaderParts.mkString(", ")}")
+      .write(s"${HttpHeaders.CONTENT_DISPOSITION}: ${part.contentDispositionHeaderValue}")
       .flatMap(_ => resp.write("\n"))
       .flatMap(_ => resp.write(s"${HttpHeaders.CONTENT_TYPE}: $partContentType"))
       .flatMap(_ => resp.write("\n\n"))
