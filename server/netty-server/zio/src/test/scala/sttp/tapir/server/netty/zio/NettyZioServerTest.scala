@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty.zio
 
+import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
@@ -10,10 +11,10 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.interop.catz._
-import zio.{Task, ZIO}
+import zio.{Runtime, Task, Unsafe, ZIO}
 
-import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import zio.stream.ZSink
 
 class NettyZioServerTest extends TestSuite with EitherValues {
@@ -43,7 +44,8 @@ class NettyZioServerTest extends TestSuite with EitherValues {
             ).tests() ++
               new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(using monadError, asyncInstance).tests() ++
-              new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests()
+              new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests() ++
+              List(stopTwiceTest)
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
@@ -51,4 +53,12 @@ class NettyZioServerTest extends TestSuite with EitherValues {
         }
         .map { case (tests, _) => tests }
     }
+
+  private def stopTwiceTest: Test = Test("stopping a server more than once") {
+    val stopTwice = NettyZioServer[Any]().port(0).start().flatMap(server => server.stop() *> server.stop())
+    // not IO.fromFuture, which can't be timed out
+    IO.blocking(Await.result(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(stopTwice)), 10.seconds))
+      .map(_ => succeed)
+      .unsafeToFuture()
+  }
 }

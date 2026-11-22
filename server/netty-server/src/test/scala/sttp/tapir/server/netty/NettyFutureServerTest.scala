@@ -2,7 +2,10 @@ package sttp.tapir.server.netty
 
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
+import io.netty.channel.embedded.EmbeddedChannel
+import io.netty.channel.group.DefaultChannelGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.util.concurrent.{DefaultEventExecutorGroup, GlobalEventExecutor}
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.monad.FutureMonad
@@ -10,25 +13,31 @@ import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
+import sttp.tapir.server.netty.internal.NettyServerHandler
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.client4._
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
-import scala.concurrent.{Future, Promise}
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.Try
 
 class NettyFutureServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
         .make(IO.delay {
-          implicit val m: FutureMonad = new FutureMonad()
+          // not the suite's serial execution context, which runs one task at a time: then, tests in which requests block concurrently are flaky
+          val serverEc = ExecutionContext.global
+          implicit val m: FutureMonad = new FutureMonad()(serverEc)
           val eventLoopGroup = new NioEventLoopGroup()
 
-          val interpreter = new NettyFutureTestServerInterpreter(eventLoopGroup)
+          val interpreter = new NettyFutureTestServerInterpreter(eventLoopGroup)(serverEc)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests =
@@ -36,7 +45,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
               new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests() ++
               new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
-              additionalTests(backend) ++
+              additionalTests(backend, eventLoopGroup) ++
               expectContinueTests(createServerTest)
 
           (tests, eventLoopGroup)
@@ -46,7 +55,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .map { case (tests, _) => tests }
     }
 
-  def additionalTests(backend: Backend[IO])(implicit ec: ExecutionContext): List[Test] = List(
+  def additionalTests(backend: Backend[IO], eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext): List[Test] = List(
     // Netty samples the requests by default, hence leaks are only detected if the number of requests is large enough.
     // There are no assertions in this test, as if there are leaks, they are reported in the test output;
     // the verification is done as part of CI.
@@ -86,10 +95,14 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
       import cats.effect.unsafe.implicits.global
 
       val releaseFirst = Promise[Unit]()
+      val secondReceived = new CountDownLatch(1)
       val route: FutureRoute = request =>
         if (request.pathSegments == List("first"))
           releaseFirst.future.map(_ => Some(ServerResponse[NettyResponse](StatusCode.Ok, Nil, None, None)))(ec)
-        else throw new RuntimeException("boom")
+        else {
+          secondReceived.countDown()
+          throw new RuntimeException("boom")
+        }
       def request(path: String) = s"GET /$path HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
 
       Resource
@@ -100,13 +113,57 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .use { socket =>
           for {
             _ <- sendRaw(socket, request("first") ++ request("second"))
-            _ <- IO.sleep(100.millis) // so that the second request is handled while the first one is in flight
+            _ <- IO.blocking(secondReceived.await(10, TimeUnit.SECONDS)) // the second request is handled while the first one is in flight
             _ <- IO(releaseFirst.success(()))
             response1 <- readRawResponse(socket)
             response2 <- readRawResponse(socket)
           } yield List(response1, response2) shouldBe List((200, ""), (500, ""))
         }
         .unsafeToFuture()
+    },
+    Test("stopping a server more than once") {
+      import cats.effect.unsafe.implicits.global
+
+      // not IO.fromFuture, which can't be timed out
+      IO.blocking {
+        val server = Await.result(NettyFutureServer()(using ec).port(0).start(), 10.seconds)
+        Await.result(server.stop(), 10.seconds)
+        Await.result(server.stop(), 10.seconds)
+      }.map(_ => succeed)
+        .unsafeToFuture()
+    },
+    Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
+      import cats.effect.unsafe.implicits.global
+
+      def eventExecutorThreads(): Set[Thread] =
+        Thread.getAllStackTraces.keySet.toArray(new Array[Thread](0)).filter(_.getName.startsWith("defaultEventExecutor")).toSet
+      val threadsBefore = eventExecutorThreads()
+      val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+      IO.fromFuture(IO.delay(NettyFutureServer(config)(using ec).start()))
+        .flatMap(server => IO.fromFuture(IO.delay(server.stop())))
+        .flatMap(_ => IO.blocking((eventExecutorThreads() -- threadsBefore).filter(t => { t.join(5000); t.isAlive })))
+        .map(_ shouldBe empty)
+        .unsafeToFuture()
+    },
+    Test("the server handler fails, if it doesn't run on the channel's event loop") {
+      implicit val m: FutureMonad = new FutureMonad()(ec)
+      val executorGroup = new DefaultEventExecutorGroup(1)
+      val channel = new EmbeddedChannel()
+      try {
+        val handler = new NettyServerHandler[Future](
+          Route.empty,
+          block => (block(), () => Future.unit),
+          new DefaultChannelGroup(GlobalEventExecutor.INSTANCE),
+          new AtomicBoolean(false),
+          NettyConfig.default
+        )
+        channel.pipeline().addLast(executorGroup, handler)
+        executorGroup.submit(new Runnable { override def run(): Unit = () }).sync() // handlerAdded has run
+        Future.successful(Try(channel.checkException()).failed.get.getCause shouldBe an[IllegalStateException])
+      } finally {
+        channel.finishAndReleaseAll(): Unit
+        executorGroup.shutdownGracefully(): Unit
+      }
     }
   )
 

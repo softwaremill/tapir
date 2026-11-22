@@ -13,8 +13,6 @@ import ox.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client4.*
-import sttp.client4.ws.async.*
-import sttp.ws.WebSocket
 import sttp.model.*
 import sttp.shared.Identity
 import sttp.tapir.*
@@ -51,15 +49,18 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
     )
     val sleeper: Sleeper[Identity] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
+    val webSocketTests = new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
+      override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
+      override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
+    }
+
     val tests =
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
         .tests() ++
         new ServerGracefulShutdownTests(createServerTest, sleeper).tests() ++
         new ServerStreamingTests(createServerTest).tests(OxStreams)(_.runDrain()) ++
-        new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
-          override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
-          override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
-        }.tests() ++
+        webSocketTests.tests() ++
+        webSocketTests.gracefulShutdownTests(_ => Flow.tick(100.millis, "tick")) ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
@@ -111,61 +112,6 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
           try conn.getResponseCode() shouldBe 400
           finally conn.disconnect
-        }
-      },
-      // the connection is upgraded, hence it's not closed when draining, but when the client closes it, or when the timeout passes
-      createServerTest.testServerLogicWithStop(
-        endpoint
-          .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
-          .handleSuccess(_ => (in: Flow[String]) => in.map(m => s"echo: $m")),
-        "web socket is kept open during shutdown",
-        gracefulShutdownTimeout = Some(10.seconds)
-      ) { stopServer => (backend, baseUri) =>
-        basicRequest
-          .get(baseUri.scheme("ws"))
-          .response(asWebSocket { (ws: WebSocket[IO]) =>
-            for {
-              m1 <- ws.sendText("1") >> ws.receiveText()
-              runningStop <- stopServer.start
-              _ <- ServerGracefulShutdownTests.awaitConnectionsRefused(baseUri.port.get).timeout(5.seconds)
-              m2 <- ws.sendText("2") >> ws.receiveText()
-            } yield (List(m1, m2), runningStop)
-          })
-          .send(backend)
-          .flatMap(_.body match {
-            case Right((messages, runningStop)) => runningStop.joinWithNever.as(messages shouldBe List("echo: 1", "echo: 2"))
-            case Left(error)                    => IO(fail(error))
-          })
-      }, {
-        val handshakeReceived = new CountDownLatch(1)
-        val releaseHandshake = new CountDownLatch(1)
-        createServerTest.testServerLogicWithStop(
-          endpoint
-            .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
-            .handleSuccess { _ =>
-              handshakeReceived.countDown()
-              releaseHandshake.await(10, TimeUnit.SECONDS).discard
-              (in: Flow[String]) => in.map(m => s"echo: $m")
-            },
-          "web socket is kept open during shutdown, if the handshake is handled when the shutdown starts",
-          gracefulShutdownTimeout = Some(10.seconds)
-        ) { stopServer => (backend, baseUri) =>
-          for {
-            runningWs <- basicRequest
-              .get(baseUri.scheme("ws"))
-              .response(asWebSocket((ws: WebSocket[IO]) => ws.sendText("1") >> ws.receiveText()))
-              .send(backend)
-              .start
-            handshakeArrived <- IO.blocking(handshakeReceived.await(10, TimeUnit.SECONDS))
-            runningStop <- stopServer.start
-            _ <- ServerGracefulShutdownTests.awaitConnectionsRefused(baseUri.port.get).timeout(5.seconds)
-            _ <- IO(releaseHandshake.countDown())
-            response <- runningWs.joinWithNever
-            _ <- runningStop.joinWithNever
-          } yield {
-            (handshakeArrived shouldBe true): Unit
-            response.body shouldBe Right("echo: 1")
-          }
         }
       },
       createServerTest.testServerLogicWithStop(
@@ -281,12 +227,17 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         .randomPort
         .withDontShutdownEventLoopGroupOnClose
         .withGracefulShutdownTimeout(10.seconds)
-      val (requestArrived, response) = supervised {
-        val binding = NettySyncServer(config).addEndpoint(slow).start()
-        val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
-        val requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
-        (requestArrived, response) // the scope ends while the request is in flight
-      }
+      // in a separate thread, so that the test fails instead of hanging, if the scope doesn't end
+      val result = new CompletableFuture[Try[(Boolean, Future[Response[Either[String, String]]])]]()
+      Thread.startVirtualThread { () =>
+        result.complete(Try(supervised {
+          val binding = NettySyncServer(config).addEndpoint(slow).start()
+          val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
+          val requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
+          (requestArrived, response) // the scope ends while the request is in flight
+        })).discard
+      }.discard
+      val (requestArrived, response) = result.get(20, TimeUnit.SECONDS).get
       assert(requestArrived)
       response.map(_.body shouldBe Right("done"))
     }

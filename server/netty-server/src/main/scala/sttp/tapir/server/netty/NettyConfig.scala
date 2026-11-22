@@ -27,7 +27,8 @@ import scala.concurrent.duration._
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
   *   contains tapir's server processing logic. A custom pipeline should use [[TapirHttpStreamsServerHandler]], as in
-  *   [[NettyConfig.defaultInitPipeline]], for `Expect: 100-continue` requests with lazily read bodies (streams) to work.
+  *   [[NettyConfig.defaultInitPipeline]], for `Expect: 100-continue` requests with lazily read bodies (streams) to work. The handler must
+  *   be added without an executor group, so that it runs on the channel's event loop.
   *
   * @param requestTimeout
   *   The maximum duration between receiving the request headers and producing a response; it therefore also bounds how long the client has

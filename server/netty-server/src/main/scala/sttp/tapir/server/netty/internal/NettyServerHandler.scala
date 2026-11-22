@@ -22,7 +22,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactiveWebSocketProcessorNettyResponseContent
 }
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, TapirStreamedHttpRequest}
-import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
+import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler, WebSocketShutdownHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.TimeUnit
@@ -50,8 +50,7 @@ class NettyServerHandler[F[_]](
 
   // Cancellation handling with eventLoopContext, lastResponseSent, and pendingResponses has been adapted
   // from http4s: https://github.com/http4s/http4s-netty/pull/396/files
-  // By using the executor of this handler (the channel's event loop, unless the handler is added with another executor), we get two
-  // benefits:
+  // By using the Netty event loop assigned to this channel (see `handlerAdded`) we get two benefits:
   //  1. We can avoid the necessary hopping around of threads since Netty pipelines will
   //     only pass events up and down from within the event loop to which it is assigned.
   //     That means calls to ctx.read(), and ct.write(..), would have to be trampolined otherwise.
@@ -70,11 +69,11 @@ class NettyServerHandler[F[_]](
   private val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
-  // connection is closed along with the response. A plain var, as it's only touched on the handler's executor.
+  // connection is closed along with the response. A plain var, as it's only touched on the event loop.
   private var requestTimeoutHandled = false
 
   // Requests received, for which the response isn't fully sent yet. When the server is shutting down, the connection is closed once this
-  // drops to 0. A plain var, as it's only touched on the handler's executor.
+  // drops to 0. A plain var, as it's only touched on the event loop.
   private var requestsInFlight = 0
 
   // Requests received, for which writing the response hasn't started yet. When the server is shutting down, only the last response
@@ -87,16 +86,24 @@ class NettyServerHandler[F[_]](
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
+  private final val WebSocketShutdownHandlerName = "wsShutdownHandler"
   private final val RequestBodyTrackerHandlerName = "requestBodyTracker"
 
-  override def handlerAdded(ctx: ChannelHandlerContext): Unit =
+  override def handlerAdded(ctx: ChannelHandlerContext): Unit = {
+    // the handler's state, and that of the handlers it adds, is confined to the channel's event loop
+    if (ctx.executor() ne ctx.channel.eventLoop) {
+      throw new IllegalStateException(
+        "NettyServerHandler must run on the channel's event loop: add it to the pipeline without an executor group"
+      )
+    }
     if (ctx.channel.isActive) {
       initHandler(ctx)
     }
+  }
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     channelGroup.add(ctx.channel)
     initHandler(ctx)
-    // a connection accepted just before the server stopped listening might miss the CloseIfIdle event
+    // a connection accepted just before the server stopped listening might miss the ServerShuttingDown event
     if (isShuttingDown.get()) {
       val _ = ctx.close()
     }
@@ -112,7 +119,7 @@ class NettyServerHandler[F[_]](
 
   private def initHandler(ctx: ChannelHandlerContext): Unit = {
     if (eventLoopContext == null) {
-      eventLoopContext = ExecutionContext.fromExecutor(ctx.executor())
+      eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
       config.idleTimeout.foreach { idleTimeout =>
         ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis, TimeUnit.MILLISECONDS))
       }
@@ -122,10 +129,9 @@ class NettyServerHandler[F[_]](
         requestBodyTracker = Some(tracker)
       }
       // When the channel closes we want to cancel any pending dispatches. Not using `channelInactive`, as it's not propagated by the
-      // `HandlerPublisher`, which netty-reactive-streams adds before this handler while a request body is streamed.
-      val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
-        if (ctx.executor().inEventLoop()) cancelPendingResponses(ctx) else ctx.executor().execute(() => cancelPendingResponses(ctx))
-      }
+      // `HandlerPublisher`, which netty-reactive-streams adds before this handler while a request body is streamed. The listener runs on
+      // the channel's event loop.
+      val _ = ctx.channel.closeFuture.addListener((_: ChannelFuture) => cancelPendingResponses(ctx))
     }
   }
 
@@ -172,7 +178,7 @@ class NettyServerHandler[F[_]](
             val _ = ctx.close()
           case _ => ()
         }
-      case NettyServerHandler.CloseIfIdle =>
+      case NettyServerHandler.ServerShuttingDown =>
         if (requestsInFlight == 0) {
           logger.debug("Closing idle connection, as the server is shutting down")
           val _ = ctx.close()
@@ -225,8 +231,7 @@ class NettyServerHandler[F[_]](
     requestsInFlight += 1
     responsesNotStarted += 1
     // the failure of a previous response is already handled, and mustn't prevent sending later ones
-    val previousResponsesSent = lastResponseSent.recover { case _ => () }(using eventLoopContext)
-    lastResponseSent = previousResponsesSent.flatMap { _ =>
+    lastResponseSent = lastResponseSent.transformWith { _ =>
       runningFuture.transform { result =>
         responsesNotStarted -= 1
         val _ = pendingResponses.dequeueFirst(_ eq cancellationSwitch)
@@ -442,10 +447,11 @@ class NettyServerHandler[F[_]](
   ) = {
     ctx.pipeline().remove(this)
     requestBodyTracker.foreach(ctx.pipeline().remove(_))
+    ctx.pipeline().addAfter(ServerCodecHandlerName, WebSocketShutdownHandlerName, new WebSocketShutdownHandler(isShuttingDown))
     ctx
       .pipeline()
       .addAfter(
-        ServerCodecHandlerName,
+        WebSocketShutdownHandlerName,
         WebSocketControlFrameHandlerName,
         new WebSocketPingPongFrameHandler(
           ignorePong = r.ignorePong,
@@ -557,7 +563,8 @@ class NettyServerHandler[F[_]](
 
 object NettyServerHandler {
 
-  /** A user event, which closes the connection if no requests are in flight. Fired on all connections when the server starts shutting down.
+  /** A user event, fired on all connections when the server starts shutting down. Idle HTTP connections are then closed, and web sockets
+    * get a close frame.
     */
-  case object CloseIfIdle
+  case object ServerShuttingDown
 }

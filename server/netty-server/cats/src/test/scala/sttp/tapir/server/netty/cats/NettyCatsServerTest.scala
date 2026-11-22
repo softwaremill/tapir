@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty.cats
 
+import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
@@ -11,7 +12,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 class NettyCatsServerTest extends TestSuite with EitherValues {
 
@@ -30,6 +31,11 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
           def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
             stream.compile.drain.void
 
+          val webSocketTests = new ServerWebSocketTests(createServerTest, Fs2Streams[IO], autoPing = true, handlePong = true) {
+            override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+            override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty
+          }
+
           val tests = new AllServerTests(
             createServerTest,
             interpreter,
@@ -42,15 +48,9 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new NettyFs2StreamingCancellationTest(createServerTest).tests() ++
             new NettyFs2StreamingInterruptedTest(createServerTest).tests() ++
             new ServerGracefulShutdownTests(createServerTest, ioSleeper).tests() ++
-            new ServerWebSocketTests(
-              createServerTest,
-              Fs2Streams[IO],
-              autoPing = true,
-              handlePong = true
-            ) {
-              override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
-              override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty
-            }.tests()
+            webSocketTests.tests() ++
+            webSocketTests.gracefulShutdownTests(_ => fs2.Stream.awakeEvery[IO](100.millis).as("tick")) ++
+            List(stopTwiceTest)
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
@@ -58,4 +58,14 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
         }
         .map { case (tests, _) => tests }
     }
+
+  private def stopTwiceTest: Test = Test("stopping a server more than once") {
+    NettyCatsServer[IO](dispatcher)
+      .port(0)
+      .start()
+      .flatMap(server => server.stop() >> server.stop())
+      .timeout(10.seconds)
+      .map(_ => succeed)
+      .unsafeToFuture()
+  }
 }

@@ -1,8 +1,7 @@
 package sttp.tapir.server.netty.cats
 
-import cats.effect.kernel.Sync
 import cats.effect.std.Dispatcher
-import cats.effect.{Async, IO, Resource, Temporal}
+import cats.effect.{Async, IO, Resource}
 import cats.syntax.all._
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
@@ -108,62 +107,37 @@ case class NettyCatsServer[F[_]: Async](
       )
 
     nettyChannelFutureToScala(channelFuture)
-      .map(ch =>
-        (
-          ch.localAddress().asInstanceOf[SA],
-          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-        )
-      )
-      .recoverWith { case e =>
-        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-          .flatMap(_ => Async[F].raiseError(e))
+      .flatMap { ch =>
+        // repeated calls return the first call's result, as the executors are then shut down; uncancelable, as a cancelled first call
+        // would make `memoize` run the stop again
+        Async[F]
+          .memoize(stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown))
+          .map(stopped => (ch.localAddress().asInstanceOf[SA], () => Async[F].uncancelable(_ => stopped)))
+      }
+      .handleErrorWith { e =>
+        shutdownExecutors(eventLoopGroup, eventExecutor) >> Async[F].raiseError(e)
       }
   }
 
-  private def waitForClosedChannels(
-      channelGroup: ChannelGroup,
-      startNanos: Long,
-      gracefulShutdownTimeoutNanos: Option[Long]
-  ): F[Unit] =
-    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
-      Temporal[F].sleep(100.millis) >>
-        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
-    } else {
-      nettyFutureToScala(channelGroup.close()).void
-    }
-
   private def stop(
-      serverChannel: Option[Channel],
+      serverChannel: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
+      isShuttingDown: AtomicBoolean
   ): F[Unit] = {
-    shutdownChannelGroup(serverChannel, channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
-      stopEventLoopGroup(eventLoopGroup, eventExecutor)
+    val drain = Async[F].defer(
+      nettyFutureToScala(NettyShutdown.drain(serverChannel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout))
+    )
+    Async[F].guarantee(drain.void, shutdownExecutors(eventLoopGroup, eventExecutor))
   }
 
-  private def shutdownChannelGroup(
-      serverChannel: Option[Channel],
-      channelGroup: ChannelGroup,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ) = {
-    Sync[F].delay(NettyShutdown.startDraining(channelGroup, isShuttingDown)) >>
-      serverChannel.fold(Async[F].unit)(ch => Async[F].defer(nettyFutureToScala(ch.close())).void) >>
-      waitForClosedChannels(
-        channelGroup,
-        startNanos = System.nanoTime(),
-        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-      )
-  }
-
-  private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
-    if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup))
-        .flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor)).map(_ => ()))
-    } else Async[F].unit
+  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): F[Unit] = {
+    val eventLoopGroupShutDown =
+      if (config.shutdownEventLoopGroupOnClose) Async[F].defer(nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup)).void)
+      else Async[F].unit
+    // no quiet period, as the event executor is used only when stopping
+    eventLoopGroupShutDown >> Async[F].defer(nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor, Duration.Zero)).void)
   }
 }
 

@@ -10,6 +10,7 @@ import sttp.client4._
 import sttp.client4.ws.async._
 import sttp.model.StatusCode
 import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -22,7 +23,10 @@ import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.duration._
+import java.net.{Socket, SocketTimeoutException}
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S & WebSockets, OPTIONS, ROUTE],
@@ -487,4 +491,95 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         }
       )
     else List.empty
+
+  /** For servers which, when shutting down, close web sockets with a 1001 (Going Away) close frame.
+    *
+    * @param tickingPipe
+    *   ignores its input, and emits frames every 100ms, without completing
+    */
+  def gracefulShutdownTests(tickingPipe: streams.Pipe[String, String]): List[Test] = List(
+    testServerLogicWithStop(
+      endpoint.out(stringWs).serverLogicSuccess[F](_ => pureResult(stringEcho)),
+      "close a web socket with a going away frame on shutdown",
+      // longer than the stop's timeout below, so that the test fails if the connection is closed only when this passes
+      gracefulShutdownTimeout = Some(30.seconds)
+    ) { stopServer => (backend, baseUri) =>
+      for {
+        response <- basicRequest
+          .get(baseUri.scheme("ws"))
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
+            for {
+              m1 <- ws.sendText("1") >> ws.receiveText()
+              runningStop <- stopServer.start
+              m2 <- ws.eitherClose(ws.receiveText())
+            } yield (m1, m2, runningStop)
+          })
+          .send(backend)
+        _ <- response.body.toOption.traverse(_._3.joinWithNever.timeout(5.seconds))
+      } yield response.body.map(r => (r._1, r._2)) shouldBe Right(("echo: 1", Left(WebSocketFrame.Close(1001, "Endpoint unavailable"))))
+    }, {
+      val handshakeReceived = new CountDownLatch(1)
+      val releaseHandshake = new CountDownLatch(1)
+      testServerLogicWithStop(
+        endpoint.out(stringWs).serverLogicSuccess[F] { _ =>
+          m.blocking {
+            handshakeReceived.countDown()
+            releaseHandshake.await(10, TimeUnit.SECONDS)
+          }.map(_ => tickingPipe)
+        },
+        "close a web socket with a going away frame, if the handshake is handled when the shutdown starts, and close the connection once " +
+          "the client answers",
+        // longer than the socket's read timeout, so that the test fails if the connection is closed only when this passes
+        gracefulShutdownTimeout = Some(30.seconds)
+      ) { stopServer => (_, baseUri) =>
+        val port = baseUri.port.get
+        rawSocket(port).use { socket =>
+          for {
+            _ <- sendRaw(socket, RawWebSocket.handshake)
+            _ <- IO.blocking(handshakeReceived.await(10, TimeUnit.SECONDS))
+            runningStop <- stopServer.start
+            _ <- ServerGracefulShutdownTests.awaitConnectionsRefused(port).timeout(5.seconds)
+            _ <- IO(releaseHandshake.countDown())
+            response <- readRawResponse(socket)
+            frame <- RawWebSocket.readFrame(socket)
+            nothingAfterClose <- RawWebSocket.nothingReceived(socket) // frames sent after the close frame are dropped
+            _ <- sendRaw(socket, RawWebSocket.clientClose)
+            afterClientClose <- IO.blocking(socket.getInputStream.read())
+            _ <- runningStop.joinWithNever.timeout(5.seconds)
+          } yield (response._1, frame._1, RawWebSocket.closeStatus(frame._2), nothingAfterClose, afterClientClose) shouldBe
+            ((101, RawWebSocket.CloseOpcode, 1001, true, -1))
+        }
+      }
+    }
+  )
+}
+
+/** For tests which need to see when exactly the server sends frames, or closes the connection. */
+private object RawWebSocket {
+  val CloseOpcode = 0x8
+
+  val handshake: Array[Byte] = ("GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
+    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n").getBytes(StandardCharsets.US_ASCII)
+
+  /** A masked close frame, without a payload. */
+  val clientClose: Array[Byte] = Array[Byte]((0x80 | CloseOpcode).toByte, 0x80.toByte, 0, 0, 0, 0)
+
+  /** Reads a frame with a payload shorter than 126 bytes, returning its opcode and payload. */
+  def readFrame(socket: Socket): IO[(Int, Array[Byte])] = IO.blocking {
+    val in = socket.getInputStream
+    val first = in.read()
+    if (first == -1) throw new IllegalStateException("Connection closed")
+    (first & 0x0f, in.readNBytes(in.read() & 0x7f))
+  }
+
+  def closeStatus(payload: Array[Byte]): Int = ((payload(0) & 0xff) << 8) | (payload(1) & 0xff)
+
+  /** Checks that neither a frame, nor the connection's end arrives for a while. */
+  def nothingReceived(socket: Socket): IO[Boolean] = IO.blocking {
+    val timeout = socket.getSoTimeout
+    socket.setSoTimeout(500)
+    try { socket.getInputStream.read(); false }
+    catch { case _: SocketTimeoutException => true }
+    finally socket.setSoTimeout(timeout)
+  }
 }

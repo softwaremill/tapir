@@ -105,11 +105,7 @@ case class NettySyncServer(
     val (socket, stop) = startServerFork(Some(new DomainSocketAddress(path.toFile)))
     NettySyncDomainSocketBinding(socket, stop)
 
-  /** Runs the server on a thread which isn't interrupted when the current scope ends. Requests are handled in forks of the server's own
-    * scope, so that they can complete while draining. Otherwise, Ox would interrupt them before running any finalizers.
-    *
-    * A fork of the current scope waits for the server to stop. When the current scope ends, the fork is interrupted, and requests the
-    * stop. If the server fails (e.g. when request handling throws a fatal error), the fork fails the current scope.
+  /** Starts the server, which runs until it's stopped, or until the current scope ends. If the server fails, the current scope fails.
     *
     * @return
     *   the bound address, and a function which stops the server.
@@ -119,8 +115,11 @@ case class NettySyncServer(
     val stopRequested = new CompletableFuture[Unit]()
     val serverOutcome = new CompletableFuture[ServerOutcome]()
 
+    // waits for the server to stop; interrupted when the current scope ends, and then requests the stop
     forkDiscard {
       unsupervised {
+        // the server runs on a thread which isn't interrupted when the current scope ends, and handles requests in forks of its own
+        // scope, so that they can complete while draining (otherwise, Ox would interrupt them before running any finalizers)
         forkUnsupervised {
           val outcome =
             try runServer(socketOverride, started, stopRequested)
@@ -159,7 +158,7 @@ case class NettySyncServer(
       serverOutcome.get() match
         case ServerOutcome.Stopped       => ()
         case ServerOutcome.StopFailed(e) => throw new IllegalStateException("Stopping the server failed", e)
-        case ServerOutcome.Failed(e)     => throw new IllegalStateException("Stopping the server failed", e)
+        case ServerOutcome.Failed(e)     => throw new IllegalStateException("The server failed", e)
     (socket, stop)
 
   /** Binds the server, and runs it in its own scope until a stop is requested. */
@@ -190,12 +189,24 @@ case class NettySyncServer(
           ).sync().channel()
           serverChannel = Some(channel)
           started.complete(channel.localAddress().asInstanceOf[SA]).discard
+
+          // Ox interrupts this thread once, when the server's scope fails: while waiting for the stop, or while draining
+          var interrupted: Option[InterruptedException] = None
+          def onScopeFailed(e: InterruptedException): Unit =
+            requestsNotStarted.scopeFailed()
+            interrupted = Some(e)
+          def drain(): Try[Unit] =
+            Try(NettyShutdown.drain(channel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout).get().discard)
+
           try stopRequested.get().discard
-          catch
-            case e: InterruptedException => // the server's scope failed
-              requestsNotStarted.scopeFailed()
-              throw e
-          finally drained = Try(drain(channel, channelGroup, isShuttingDown))
+          catch case e: InterruptedException => onScopeFailed(e)
+          drained =
+            try drain()
+            catch
+              case e: InterruptedException =>
+                onScopeFailed(e)
+                drain() // re-running is safe, as each step is idempotent
+          interrupted.foreach(e => throw e)
         })
       catch case e: Throwable => Left(e)
 
@@ -256,15 +267,6 @@ case class NettySyncServer(
       }
     )
 
-  /** Stops accepting connections, and waits for the open ones to close, up to the graceful shutdown timeout. */
-  private def drain(serverChannel: Channel, channelGroup: ChannelGroup, isShuttingDown: AtomicBoolean): Unit =
-    NettyShutdown.startDraining(channelGroup, isShuttingDown)
-    serverChannel.close().get().discard
-    val startNanos = System.nanoTime()
-    val timeoutNanos = config.gracefulShutdownTimeout.map(_.toNanos)
-    while !channelGroup.isEmpty && timeoutNanos.exists(_ >= System.nanoTime() - startNanos) do Thread.sleep(100)
-    channelGroup.close().get().discard
-
   /** Closes the server's channels, and releases its resources. */
   private def closeServer(
       serverChannel: Option[Channel],
@@ -274,10 +276,9 @@ case class NettySyncServer(
   ): Unit =
     serverChannel.foreach(_.close().get().discard)
     channelGroup.close().get().discard
-    if config.shutdownEventLoopGroupOnClose then
-      // no quiet period, as request handling forks are done
-      NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriod = Duration.Zero).get().discard
-      NettyShutdown.shutdownExecutor(eventExecutor, quietPeriod = Duration.Zero).get().discard
+    // no quiet period, as request handling forks are done
+    if config.shutdownEventLoopGroupOnClose then NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriod = Duration.Zero).get().discard
+    NettyShutdown.shutdownExecutor(eventExecutor, quietPeriod = Duration.Zero).get().discard
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)

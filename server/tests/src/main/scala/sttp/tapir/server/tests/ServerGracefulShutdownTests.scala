@@ -205,6 +205,33 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         } yield stopped shouldBe Right(())).guarantee(IO(releaseRequest.countDown()))
       }
     }, {
+      val requestReceived = new CountDownLatch(1)
+      val releaseRequest = new CountDownLatch(1)
+      testServerLogicWithStop(
+        endpoint
+          .out(plainBody[String])
+          .serverLogic { _ =>
+            m.eval(requestReceived.countDown())
+              .flatMap(_ => m.blocking(releaseRequest.await(30, TimeUnit.SECONDS)))
+              .flatMap(_ => pureResult("processing finished".asRight[Unit]))
+          },
+        "Server closes the connection of a request which is still running when the graceful shutdown timeout passes",
+        gracefulShutdownTimeout = Some(1.second)
+      ) { (stopServer) => (_, baseUri) =>
+        rawSocket(baseUri.port.get).use { socket =>
+          (for {
+            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            _ <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
+            runningStop <- stopServer.start
+            afterStop <- IO.blocking(socket.getInputStream.read()).timed
+            _ <- runningStop.joinWithNever.timeout(5.seconds)
+          } yield {
+            (afterStop._2 shouldBe -1): Unit // no response
+            afterStop._1 should be < 5.seconds
+          }).guarantee(IO(releaseRequest.countDown()))
+        }
+      }
+    }, {
       val requestsReceived = new CountDownLatch(2) // both pipelined requests are handled before the shutdown starts
       val releaseRequests = new CountDownLatch(1)
       testServerLogicWithStop(

@@ -66,11 +66,30 @@ its [documentation](https://ox.softwaremill.com/).
 
 A server started using `start()` runs until the scope in which it was started
 ends, or until `stop()` is called on the returned binding. In both cases, it's
-stopped gracefully (see the graceful shutdown timeout
-[below](#server-socket-configuration)). Calling `stop()` is needed only to stop
-the server before its scope ends, e.g. when that scope lasts for the whole
-application. Alternatively, start the server in a nested scope, which ends when
-the server should stop.
+stopped gracefully (see [graceful shutdown](#graceful-shutdown)). Calling
+`stop()` is needed only to stop the server before its scope ends, e.g. when that
+scope lasts for the whole application. Alternatively, start the server in a
+nested scope, which ends when the server should stop.
+
+## Graceful shutdown
+
+When a server is stopped, e.g. using the binding's `stop()` method, it:
+
+* stops accepting new connections, and closes idle ones right away
+* lets in-flight requests complete, closing each connection once its last
+  response is sent. New requests get a 503, or are dropped if they follow other
+  requests on the same connection which are still running
+* sends web sockets a close frame with status 1001 (Going Away). Frames which
+  the server logic sends after it are dropped. Once the client answers the
+  close frame, the connection is closed, and the web socket's pipe is
+  interrupted
+* once all connections are closed, or the graceful shutdown timeout passes (see
+  [below](#server-socket-configuration)), closes the remaining connections, and
+  releases the server's resources
+
+As new connections are refused right away, behind a load balancer, first take
+the instance out of rotation (e.g. fail the readiness check) and wait until the
+load balancer stops sending new connections, then stop the server.
 
 ## Configuration
 
@@ -113,19 +132,15 @@ customise the server socket, such as:
 * request timeout, see [request timeout](#request-timeout) below
 * connection timeout
 * linger timeout
-* graceful shutdown timeout: when stopped e.g. using
-  `NettySyncServerBinding.stop()`, the server stops accepting new connections
-  and closes idle ones right away. Then, it waits at most 10 seconds for
-  in-flight requests to complete, closing each connection once its last
-  response is sent; new requests on these connections aren't handled. Web
-  socket connections stay open until the client closes them, or the timeout
-  passes. Afterwards, all server resources are closed. See also
-  [stopping the server](#stopping-the-server)
+* graceful shutdown timeout: how long a stopped server waits for in-flight
+  requests to complete, 10 seconds by default; see
+  [graceful shutdown](#graceful-shutdown)
 * server header
 * maximum number of connections
 * custom netty pipeline & low-level logging handlers; a custom pipeline should
   use `TapirHttpStreamsServerHandler` instead of `HttpStreamsServerHandler`, as
-  otherwise `Expect: 100-continue` requests with streamed bodies might hang
+  otherwise `Expect: 100-continue` requests with streamed bodies might hang;
+  tapir's handler must be added without an executor group
 
 For example, to change the request timeout:
 

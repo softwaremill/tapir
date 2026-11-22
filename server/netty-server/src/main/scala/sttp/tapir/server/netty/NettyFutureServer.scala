@@ -3,7 +3,7 @@ package sttp.tapir.server.netty
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
-import io.netty.util.concurrent.{DefaultEventExecutor, EventExecutor}
+import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
@@ -13,9 +13,8 @@ import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, Net
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 case class NettyFutureServer(
@@ -105,63 +104,34 @@ case class NettyFutureServer(
       )
 
     nettyChannelFutureToScala(channelFuture)
-      .map(ch =>
-        (
-          ch.localAddress().asInstanceOf[SA],
-          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-        )
-      )
+      .map { ch =>
+        // repeated calls return the first call's result, as the executors are then shut down
+        lazy val stopped = stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown)
+        (ch.localAddress().asInstanceOf[SA], () => stopped)
+      }
       .recoverWith { case e =>
-        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-          .flatMap(_ => Future.failed(e))
+        shutdownExecutors(eventLoopGroup, eventExecutor).flatMap(_ => Future.failed(e))
       }
   }
 
-  private def waitForClosedChannels(
-      channelGroup: ChannelGroup,
-      scheduler: EventExecutor,
-      startNanos: Long,
-      gracefulShutdownTimeoutNanos: Option[Long]
-  ): Future[Unit] =
-    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
-      // not sleeping on `ec`, which might be needed to complete the in-flight requests
-      val wait = scheduler.schedule(new Runnable { override def run(): Unit = () }, 100, TimeUnit.MILLISECONDS)
-      nettyFutureToScala(wait).flatMap(_ => {
-        waitForClosedChannels(channelGroup, scheduler, startNanos, gracefulShutdownTimeoutNanos)
-      })
-    } else {
-      nettyFutureToScala(channelGroup.close()).map(_ => ())
-    }
-
   private def stop(
-      serverChannel: Option[Channel],
+      serverChannel: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Future[Unit] = {
-    NettyShutdown.startDraining(channelGroup, isShuttingDown)
-    serverChannel
-      .fold(Future.unit)(ch => nettyFutureToScala(ch.close()).map(_ => ()))
-      .flatMap { _ =>
-        waitForClosedChannels(
-          channelGroup,
-          eventExecutor,
-          startNanos = System.nanoTime(),
-          gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-        )
-      }
-      .flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
-  }
+      isShuttingDown: AtomicBoolean
+  ): Future[Unit] =
+    nettyFutureToScala(
+      NettyShutdown.drain(serverChannel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+    ).transformWith(drained => shutdownExecutors(eventLoopGroup, eventExecutor).flatMap(_ => Future.fromTry(drained.map(_ => ()))))
 
-  private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
-    if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup))
-        .flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor)).map(_ => ()))
-    } else Future.successful(())
+  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): Future[Unit] = {
+    val eventLoopGroupShutDown =
+      if (config.shutdownEventLoopGroupOnClose) nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup)).map(_ => ())
+      else Future.unit
+    // no quiet period, as the event executor is used only when stopping
+    eventLoopGroupShutDown.flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor, Duration.Zero)).map(_ => ()))
   }
-
 }
 
 object NettyFutureServer {
