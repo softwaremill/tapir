@@ -83,42 +83,45 @@ case class NettyCatsServer[F[_]: Async](
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] =
     // uncancelable until the cleanup is in place; only waiting for the bind can be cancelled
     Async[F].uncancelable { poll =>
-      val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
-      implicit val monadError: MonadError[F] = new CatsMonadError[F]()
-      val endpointRoute = serverEndpoints match {
-        case Vector() => Vector.empty
-        case _        => Vector(NettyCatsServerInterpreter(options).toRoute(serverEndpoints.toList))
-      }
-      val allRoutes = endpointRoute ++ otherRoutes
-      val route = allRoutes match {
-        case Vector()  => Route.empty
-        case Vector(r) => r
-        case many      => Route.combine(many)
-      }
-      val eventExecutor = new DefaultEventExecutor()
-      val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
-      val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
+      // deferred, so that each run allocates, also for Async instances which don't call the body lazily
+      Async[F].defer {
+        val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+        implicit val monadError: MonadError[F] = new CatsMonadError[F]()
+        val endpointRoute = serverEndpoints match {
+          case Vector() => Vector.empty
+          case _        => Vector(NettyCatsServerInterpreter(options).toRoute(serverEndpoints.toList))
+        }
+        val allRoutes = endpointRoute ++ otherRoutes
+        val route = allRoutes match {
+          case Vector()  => Route.empty
+          case Vector(r) => r
+          case many      => Route.combine(many)
+        }
+        val eventExecutor = new DefaultEventExecutor()
+        val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
+        val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
-      val channelFuture =
-        NettyBootstrap(
-          config,
-          new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config),
-          eventLoopGroup,
-          socketOverride
-        )
+        val channelFuture =
+          NettyBootstrap(
+            config,
+            new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config),
+            eventLoopGroup,
+            socketOverride
+          )
 
-      val bound = poll(nettyChannelFutureToScala(channelFuture)).flatMap { ch =>
-        // repeated calls return the first call's result, as the executors are then shut down; uncancelable, as a cancelled first call
-        // would make `memoize` run the stop again
-        Async[F]
-          .memoize(stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown))
-          .map(stopped => (ch.localAddress().asInstanceOf[SA], () => Async[F].uncancelable(_ => stopped)))
-      }
-      Async[F].guaranteeCase(bound) {
-        case Outcome.Succeeded(_) => Async[F].unit
-        case _                    =>
-          // if cancelled, the bind might still complete
-          Async[F].defer(nettyFutureToScala(channelFuture.channel().close())).attempt >> shutdownExecutors(eventLoopGroup, eventExecutor)
+        val bound = poll(nettyChannelFutureToScala(channelFuture)).flatMap { ch =>
+          // repeated calls return the first call's result, as the executors are then shut down; uncancelable, as a cancelled first call
+          // would make `memoize` run the stop again
+          Async[F]
+            .memoize(stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown))
+            .map(stopped => (ch.localAddress().asInstanceOf[SA], () => Async[F].uncancelable(_ => stopped)))
+        }
+        Async[F].guaranteeCase(bound) {
+          case Outcome.Succeeded(_) => Async[F].unit
+          case _                    =>
+            // if cancelled, the bind might still complete
+            Async[F].defer(nettyFutureToScala(channelFuture.channel().close())).attempt >> shutdownExecutors(eventLoopGroup, eventExecutor)
+        }
       }
     }
 
