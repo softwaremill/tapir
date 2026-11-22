@@ -40,7 +40,7 @@ jobs:
       uses: actions/checkout@v7
     - uses: sbt/setup-sbt@67d461eba2c4753196c230e02da850757ba4775e # v1, specifically v1.5.14
     - name: Set up JDK 
-      uses: actions/setup-java@v6.2.0
+      uses: actions/setup-java@v6.3.0
       with:
         distribution: 'temurin'
         cache: 'sbt'
@@ -191,7 +191,7 @@ jobs:
       uses: actions/checkout@v7
     - uses: sbt/setup-sbt@67d461eba2c4753196c230e02da850757ba4775e # v1, specifically v1.5.14
     - name: Set up JDK
-      uses: actions/setup-java@v6.2.0
+      uses: actions/setup-java@v6.3.0
       with:
         distribution: 'temurin'
         cache: 'sbt'
@@ -212,7 +212,7 @@ jobs:
         uses: actions/checkout@v7
       - uses: sbt/setup-sbt@67d461eba2c4753196c230e02da850757ba4775e # v1, specifically v1.5.14
       - name: Set up JDK
-        uses: actions/setup-java@v6.2.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
