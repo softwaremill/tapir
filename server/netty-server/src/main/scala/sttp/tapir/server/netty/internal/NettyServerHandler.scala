@@ -36,7 +36,8 @@ import scala.util.{Failure, Success, Try}
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
   *   Future[Unit]` allowing cancellation of that Future. For example, this can be realized by
-  *   `cats.effect.std.Dispatcher.unsafeToFutureCancelable`.
+  *   `cats.effect.std.Dispatcher.unsafeToFutureCancelable`. After cancellation, the returned Future must still complete (e.g. with a
+  *   failure), as only then the request is released.
   */
 class NettyServerHandler[F[_]](
     route: Route[F],

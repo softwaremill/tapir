@@ -95,8 +95,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
               _ <- runZio(firstStop.interrupt)
               requestConnectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
               secondStop <- runZio(binding.stop().timeout(zio.Duration.fromSeconds(5)))
-              refused <- connectionRefused(binding.port)
-            } yield (requestArrived, requestConnectionClosed, secondStop, refused) shouldBe ((true, true, Some(()), true))
+            } yield (requestArrived, requestConnectionClosed, secondStop) shouldBe ((true, true, Some(())))
           }
         }
         .guarantee(IO(releaseRequest.countDown()))

@@ -259,7 +259,6 @@ case class NettySyncServer(
       scalaPromise.future,
       () => {
         requestsNotStarted.remove(scalaPromise)
-        // the response must complete, so that the request is released
         if startedOrCancelled.compareAndSet(false, true) then
           scalaPromise.tryFailure(new CancellationException("Request cancelled")).discard
         // if the fork isn't created yet, cancels it once it is

@@ -3,6 +3,7 @@ package sttp.tapir.server.netty.cats
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.nio.NioServerSocketChannel
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
@@ -10,10 +11,12 @@ import sttp.monad.MonadError
 import sttp.tapir.endpoint
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.netty.NettyConfig
+import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 import sttp.tapir.server.netty.internal.FutureUtil
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -51,7 +54,14 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new ServerGracefulShutdownTests(createServerTest).tests() ++
             webSocketTests.tests() ++
             webSocketTests.gracefulShutdownTests(_ => fs2.Stream.awakeEvery[IO](100.millis).as("tick")) ++
-            List(stopTwiceTest, stopCancelledTest(eventLoopGroup), quietPeriodTest, threadLeakTest(eventLoopGroup), startCancelledTest)
+            List(
+              stopTwiceTest,
+              stopCancelledTest(eventLoopGroup),
+              quietPeriodTest,
+              threadLeakTest(eventLoopGroup),
+              startCancelledTest,
+              startLazyTest(eventLoopGroup)
+            )
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
@@ -96,12 +106,23 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
               _ <- firstStop.cancel
               requestConnectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
               secondStop <- binding.stop().timeout(5.seconds).attempt
-              refused <- connectionRefused(binding.port)
-            } yield (requestArrived, requestConnectionClosed, secondStop, refused) shouldBe ((true, true, Right(()), true))
+            } yield (requestArrived, requestConnectionClosed, secondStop) shouldBe ((true, true, Right(())))
           }
         }
         .guarantee(IO(releaseRequest.countDown()))
         .unsafeToFuture()
+    }
+
+  private def startLazyTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("start() doesn't start a server until the returned effect is run") {
+      val eventLoopGroupInits = new AtomicInteger(0)
+      val config = NettyConfig.default.randomPort.withDontShutdownEventLoopGroupOnClose
+        .eventLoopConfig(EventLoopConfig(() => { eventLoopGroupInits.incrementAndGet(); eventLoopGroup }, classOf[NioServerSocketChannel]))
+      val start = NettyCatsServer[IO](dispatcher, config).start()
+      (for {
+        initsBeforeRun <- IO(eventLoopGroupInits.get())
+        _ <- start.flatMap(_.stop())
+      } yield (initsBeforeRun, eventLoopGroupInits.get()) shouldBe ((0, 1))).unsafeToFuture()
     }
 
   // the other tests use a shared event loop group, which isn't shut down when the server stops

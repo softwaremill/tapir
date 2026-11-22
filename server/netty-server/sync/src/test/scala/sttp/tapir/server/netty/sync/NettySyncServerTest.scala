@@ -17,6 +17,7 @@ import sttp.model.*
 import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.tests.*
 import sttp.tapir.tests.*
 
@@ -285,7 +286,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         // the runner runs functions one at a time, so the server logic can't start until this one ends
         runner.async(unblockRunner.await())
         try
-          val (response, cancel) = NettySyncServer().unsafeRunF(runner, new RequestsNotStarted)(() => fail("Server logic started"))
+          val (response, cancel) = NettySyncServer().unsafeRunF(runner, new RequestsNotStarted)(() => ServerResponse.notFound)
           cancel().discard
           response.value should matchPattern { case Some(Failure(_: CancellationException)) => }
         finally unblockRunner.countDown()

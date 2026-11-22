@@ -80,7 +80,7 @@ case class NettyCatsServer[F[_]: Async](
   private def unsafeRunAsync(block: () => F[ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
     options.dispatcher.unsafeToFutureCancelable(block())
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] = {
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] = Async[F].defer {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val endpointRoute = serverEndpoints match {
