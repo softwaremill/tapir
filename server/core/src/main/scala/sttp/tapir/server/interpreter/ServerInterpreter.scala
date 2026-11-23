@@ -294,17 +294,16 @@ class ServerInterpreter[R, F[_], B, S](
     }
 
   private def responder(defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {
-    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] = {
+    // Encoding may throw (e.g. on invalid multipart part headers). Using `eval` turns this into a failed effect, which
+    // exception interceptors can handle; for some effects (e.g. ZIO), an exception thrown in `flatMap` is not catchable.
+    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] = monad.eval {
       val outputValues =
         new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil))
           .apply(output.output, ParamsAsAny(output.value), OutputValues.empty)
       val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
       val headers = outputValues.headers
-      (statusCode, outputValues.body) match {
-        case (_, Some(bodyFromHeaders)) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
-        case (_, None)                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
-      }
+      ServerResponse(statusCode, headers, outputValues.body.map(_(Headers(headers))), Some(output))
     }
   }
 
