@@ -161,6 +161,8 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
   private def formatToContentType(format: CodecFormat, charset: Option[Charset]): String =
     charset.fold(format.mediaType)(format.mediaType.charset(_)).toString()
 
+  private def quoted(s: String): String = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
   private def multipartFormToStream[A](
       dataParts: Seq[DataPart],
       fileParts: Seq[FilePart[Source[ByteString, ?]]]
@@ -171,7 +173,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
       val result = dataParts
         .flatMap { case DataPart(name, value) =>
           s"""
-              --$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name="$name"\r\n\r\n$value\r\n
+              --$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=${quoted(name)}\r\n\r\n$value\r\n
             """.stripMargin
         }
         .mkString("")
@@ -179,8 +181,8 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
     }
 
     def filePartHeader(file: FilePart[?]) = {
-      val name = s""""${file.key}""""
-      val filename = s""""${file.filename}""""
+      val name = quoted(file.key)
+      val filename = quoted(file.filename)
       val contentType = file.contentType
         .map { ct => s"${HeaderNames.CONTENT_TYPE}: $ct\r\n" }
         .getOrElse("")

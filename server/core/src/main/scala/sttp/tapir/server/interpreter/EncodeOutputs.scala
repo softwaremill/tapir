@@ -4,7 +4,7 @@ import sttp.model._
 import sttp.tapir.EndpointIO.OneOfBodyVariant
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
-import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, RawPart, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
@@ -40,7 +40,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
       case EndpointIO.Body(rawBodyType, codec, _)   =>
         val maybeCharset = if (codec.format.mediaType.isText) charset(rawBodyType) else None
-        ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
+        ov.withBody(headers => fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
           .withDefaultContentType(codec.format, maybeCharset)
       case EndpointIO.OneOfBody(variants, mapping) => applySingle(chooseOneOfVariant(variants), ParamsAsAny(encodedM[Any](mapping)), ov)
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
@@ -77,6 +77,26 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         apply(chosenVariant.output, ParamsAsAny(enc), ov)
 
       case EndpointOutput.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
+    }
+  }
+
+  private def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): B = {
+    bodyType match {
+      case _: RawBodyType.MultipartBody => v.asInstanceOf[Seq[RawPart]].foreach(validatePartHeaders)
+      case _                            => ()
+    }
+    rawToResponseBody.fromRawValue(v, headers, format, bodyType)
+  }
+
+  // Part headers are written into the response body, so the server's response header validation doesn't cover them.
+  // Some multipart encoders (e.g. Apache httpmime) write LF unescaped, which allows injecting part headers.
+  private def validatePartHeaders(part: RawPart): Unit = {
+    val values = List(part.name) ++ part.otherDispositionParams.flatMap { case (k, v) => List(k, v) } ++
+      part.headers.flatMap(h => List(h.name, h.value))
+    if (values.exists(v => v.contains('\r') || v.contains('\n'))) {
+      throw new IllegalArgumentException(
+        "Multipart response part name, disposition parameters and headers cannot contain CR or LF characters"
+      )
     }
   }
 

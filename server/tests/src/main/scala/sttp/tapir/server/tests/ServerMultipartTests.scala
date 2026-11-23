@@ -34,14 +34,30 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     partContentTypeHeaderSupport: Boolean = true,
     partOtherHeaderSupport: Boolean = true,
     maxContentLengthSupport: Boolean = true,
-    utf8FileNameSupport: Boolean = true
+    utf8FileNameSupport: Boolean = true,
+    partFileNameQuoteEscapingSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =
     basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) ++
       (if (maxContentLengthSupport) maxContentLengthTests() else Nil) ++
-      (if (utf8FileNameSupport) utf8FileNameTests() else Nil)
+      (if (utf8FileNameSupport) utf8FileNameTests() else Nil) ++
+      (if (partFileNameQuoteEscapingSupport) partFileNameQuoteEscapingTests() else Nil)
+
+  def partFileNameQuoteEscapingTests(): List[Test] = List(
+    testServer(endpoint.get.out(multipartBody), "escape quotes in response part file name")(_ =>
+      pureResult(Seq(Part("data", "content".getBytes).fileName("x\"; name=\"other")).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .get(baseUri)
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body should not include "name=\"other\""
+        }
+    }
+  )
 
   def maxContentLengthTests(): List[Test] = List(
     testServer(
@@ -154,6 +170,17 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.body should include("peach mario 1 result")
             r.body should include("peach mario 2 result")
             r.body should include("peach mario 3 result")
+          }
+      },
+      testServer(endpoint.get.out(multipartBody), "reject CR/LF in response part file name")(_ =>
+        pureResult(Seq(Part("data", "content".getBytes).fileName("a\r\nX-Injected: yes")).asRight[Unit])
+      ) { (backend, baseUri) =>
+        basicStringRequest
+          .get(baseUri)
+          .send(backend)
+          .map { r =>
+            r.code shouldBe StatusCode.InternalServerError
+            r.body should not include "X-Injected"
           }
       },
       testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>

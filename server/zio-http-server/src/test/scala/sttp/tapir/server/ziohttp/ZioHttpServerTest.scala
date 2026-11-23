@@ -352,7 +352,8 @@ class ZioHttpServerTest extends TestSuite {
             options = false,
             metrics = false
           ).tests() ++
-          new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
+          // zio-http writes part file names without escaping quotes
+          new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false, partFileNameQuoteEscapingSupport = false).tests() ++
           // zio-http never sends 100 Continue
           new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(ZioStreams)(drainZStream) ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
