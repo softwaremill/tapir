@@ -544,12 +544,51 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             _ <- sendRaw(socket, RawWebSocket.clientClose)
             afterClientClose <- IO.blocking(socket.getInputStream.read())
             _ <- runningStop.joinWithNever.timeout(5.seconds)
-          } yield {
-            (handshakeArrived shouldBe true): Unit
-            (response._1, frame._1, RawWebSocket.closeStatus(frame._2), nothingAfterClose, afterClientClose) shouldBe
-              ((101, RawWebSocket.CloseOpcode, 1001, true, -1))
-          }
+          } yield (
+            handshakeArrived,
+            response._1,
+            frame._1,
+            RawWebSocket.closeStatus(frame._2),
+            nothingAfterClose,
+            afterClientClose
+          ) shouldBe
+            ((true, 101, RawWebSocket.CloseOpcode, 1001, true, -1))
         }
+      }
+    },
+    testServerLogicWithStop(
+      endpoint.out(stringWs).serverLogicSuccess[F](_ => pureResult(stringEcho)),
+      "a request to a web socket endpoint without upgrade headers doesn't delay shutdown",
+      // longer than the socket's read timeout, so that the test fails if the connection is closed only when this passes
+      gracefulShutdownTimeout = Some(30.seconds)
+    ) { stopServer => (_, baseUri) =>
+      rawSocket(baseUri.port.get).use { socket =>
+        for {
+          _ <- sendRaw(socket, rawGet())
+          response <- readRawResponse(socket)
+          runningStop <- stopServer.start
+          afterStop <- IO.blocking(socket.getInputStream.read())
+          _ <- runningStop.joinWithNever
+        } yield (response._1, afterStop) shouldBe ((400, -1))
+      }
+    }
+  )
+
+  /** For servers which respond with a 426 to a handshake with an unsupported web socket version (RFC 6455, 4.4), keeping the connection
+    * open.
+    */
+  def unsupportedVersionTests(): List[Test] = List(
+    testServerLogic(
+      endpoint.out(stringWs).serverLogicSuccess[F](_ => pureResult(stringEcho)),
+      "respond with 426 to a web socket handshake with an unsupported version, and handle later requests on the same connection"
+    ) { (_, baseUri) =>
+      rawSocket(baseUri.port.get).use { socket =>
+        for {
+          _ <- sendRaw(socket, RawWebSocket.handshake(version = 99))
+          response1 <- readRawResponseWithHeaders(socket)
+          _ <- sendRaw(socket, rawGet())
+          response2 <- readRawResponse(socket)
+        } yield (response1._1, response1._2.contains("sec-websocket-version: 13"), response2._1) shouldBe ((426, true, 400))
       }
     }
   )

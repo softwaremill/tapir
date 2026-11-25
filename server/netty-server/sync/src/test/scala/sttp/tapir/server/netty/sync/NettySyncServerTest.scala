@@ -62,6 +62,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         new ServerStreamingTests(createServerTest).tests(OxStreams)(_.runDrain()) ++
         webSocketTests.tests() ++
         webSocketTests.gracefulShutdownTests(_ => Flow.tick(100.millis, "tick")) ++
+        webSocketTests.unsupportedVersionTests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
@@ -126,46 +127,6 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           finally conn.disconnect
         }
       },
-      createServerTest.testServerLogicWithStop(
-        endpoint
-          .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
-          .handleSuccess(_ => (in: Flow[String]) => in),
-        "a request to a web socket endpoint without upgrade headers doesn't delay shutdown",
-        // longer than the socket's read timeout, so that the test fails if the connection is closed only when this passes
-        gracefulShutdownTimeout = Some(30.seconds)
-      ) { stopServer => (_, baseUri) =>
-        rawSocket(baseUri.port.get).use { socket =>
-          for {
-            _ <- sendRaw(socket, rawGet())
-            response <- readRawResponse(socket)
-            runningStop <- stopServer.start
-            afterStop <- IO.blocking(socket.getInputStream.read())
-            _ <- runningStop.joinWithNever
-          } yield {
-            (response shouldBe ((400, "Incorrect Web Socket handshake"))): Unit
-            afterStop shouldBe -1
-          }
-        }
-      },
-      createServerTest.testServerLogic(
-        endpoint
-          .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
-          .handleSuccess(_ => (in: Flow[String]) => in),
-        "respond with 426 to a web socket handshake with an unsupported version, and handle later requests on the same connection"
-      ) { (_, baseUri) =>
-        rawSocket(baseUri.port.get).use { socket =>
-          for {
-            _ <- sendRaw(socket, RawWebSocket.handshake(version = 99))
-            response1 <- readRawResponseWithHeaders(socket)
-            _ <- sendRaw(socket, rawGet())
-            response2 <- readRawResponse(socket)
-          } yield {
-            (response1._1 shouldBe 426): Unit
-            (response1._2 should contain("sec-websocket-version: 13")): Unit
-            response2 shouldBe ((400, "Incorrect Web Socket handshake"))
-          }
-        }
-      },
       // the only way for a request to fail, instead of resulting in a 500 response created by the exception interceptor
       createServerTest.testServerLogic(
         endpoint.get
@@ -197,6 +158,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .send(backend)
           .map(_.body.length shouldBe 10 * 1024 * 1024)
       }, {
+        // the sync version of ServerCancellationTests, which needs a cats Async instance
         val started = new CountDownLatch(1)
         val interrupted = new CountDownLatch(1)
         createServerTest.testServerLogic(
@@ -282,7 +244,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       List(started, notStarted, addedAfterFailure).map(_.isCompleted) shouldBe List(false, true, true)
     }
 
-  /** Otherwise, the request isn't released, as that's done once the response completes. */
+  /** Otherwise, the request isn't released, as that's done once the response completes. Not reachable reliably with a real client. */
   def cancelledBeforeStartTest: Test =
     Test("the response to a request cancelled before its server logic starts is completed") {
       supervised {

@@ -54,6 +54,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new ServerGracefulShutdownTests(createServerTest).tests() ++
             webSocketTests.tests() ++
             webSocketTests.gracefulShutdownTests(_ => fs2.Stream.awakeEvery[IO](100.millis).as("tick")) ++
+            webSocketTests.unsupportedVersionTests() ++
             new NettyServerStopTests(eventLoopGroup) {
               override def withServer[A](config: NettyConfig)(use: IO[Unit] => IO[A]): IO[A] =
                 NettyCatsServer[IO](dispatcher, config)
