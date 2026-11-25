@@ -1,8 +1,7 @@
 package sttp.tapir.server.netty.sync
 
-import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
+import io.netty.channel.group.DefaultChannelGroup
 import io.netty.channel.unix.DomainSocketAddress
-import io.netty.channel.{Channel, EventLoopGroup}
 import io.netty.util.concurrent.DefaultEventExecutor
 import org.slf4j.LoggerFactory
 import ox.*
@@ -173,8 +172,7 @@ case class NettySyncServer(
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown = new AtomicBoolean(false)
     val requestsNotStarted = new RequestsNotStarted
-    // set in the server's scope, read once it ends (its forks are then joined, so the writes are visible); vars, as the scope might fail
-    var serverChannel: Option[Channel] = None
+    // set in the server's scope, read once it ends (its forks are then joined, so the write is visible); a var, as the scope might fail
     var drained: Try[Unit] = Success(())
 
     val scopeResult =
@@ -188,7 +186,6 @@ case class NettySyncServer(
             eventLoopGroup,
             socketOverride
           ).sync().channel()
-          serverChannel = Some(channel)
           started.complete(channel.localAddress().asInstanceOf[SA]).discard
 
           // Ox interrupts this thread once, when the server's scope fails: while waiting for the stop, or while draining. The scope then
@@ -206,16 +203,17 @@ case class NettySyncServer(
         })
       catch case e: Throwable => Left(e)
 
-    // closing once request-handling forks are done (interrupted if still running), so that their callbacks can still run on the event loops
-    val closed = closeServer(serverChannel, eventLoopGroup, channelGroup, eventExecutor)
-    val stopErrors = List(drained, closed).flatMap(_.failed.toOption)
-    def withSuppressed(e: Throwable, others: List[Throwable]): Throwable = e.tap(e => others.foreach(e.addSuppressed))
+    // once request-handling forks are done (interrupted if still running), so that their callbacks can still run on the event loops; hence
+    // also no quiet period
+    NettyShutdown
+      .shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero)
+      .get()
+      .discard
     scopeResult match
-      case Left(e)  => ServerOutcome.Failed(withSuppressed(e, stopErrors))
-      case Right(_) =>
-        stopErrors match
-          case Nil         => ServerOutcome.Stopped
-          case e :: others => ServerOutcome.StopFailed(withSuppressed(e, others))
+      case Left(e) =>
+        drained.failed.foreach(e.addSuppressed)
+        ServerOutcome.Failed(e)
+      case Right(_) => drained.fold(ServerOutcome.StopFailed(_), _ => ServerOutcome.Stopped)
 
   private def route(inScopeRunner: InScopeRunner): Route[Identity] =
     val endpointRoute = serverEndpoints match {
@@ -267,23 +265,6 @@ case class NettySyncServer(
       }
     )
 
-  /** Closes the server's channels, and releases its resources, even if closing the channels fails. */
-  private def closeServer(
-      serverChannel: Option[Channel],
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor
-  ): Try[Unit] =
-    val closed = Try:
-      serverChannel.foreach(_.close().get().discard)
-      channelGroup.close().get().discard
-    // no quiet period, as request handling forks are done
-    NettyShutdown
-      .shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor, eventLoopGroupQuietPeriod = Duration.Zero)
-      .get()
-      .discard
-    closed
-
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)
 
@@ -298,7 +279,7 @@ object NettySyncServer:
 
 private enum ServerOutcome:
   case Stopped
-  // draining or closing failed
+  // draining failed
   case StopFailed(e: Throwable)
   // the server's scope failed, including when binding
   case Failed(e: Throwable)
