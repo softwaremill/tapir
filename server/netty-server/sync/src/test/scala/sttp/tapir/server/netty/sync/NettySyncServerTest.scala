@@ -79,6 +79,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         }.tests() ++
         List(
           startFailureTest(eventLoopGroup),
+          forkLocalTest(eventLoopGroup),
           requestsNotStartedTest,
           cancelledBeforeStartTest
         )
@@ -223,6 +224,19 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         val result = Try(timeout(10.seconds)(abandonOnInterrupt(supervised(NettySyncServer(config).start().port))))
         result.failed.get shouldBe a[java.io.IOException] // not wrapped
       finally taken.close()
+    }
+
+  /** Sync-only: server logic runs in forks which are nested in the scope in which the server is started. */
+  def forkLocalTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("server logic sees the fork local values of the scope in which the server is started") {
+      val local = ForkLocal("default")
+      val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+      val readLocal = endpoint.get.out(stringBody).handleSuccess(_ => local.get())
+      val response = local.supervisedWhere("set") {
+        val binding = NettySyncServer(config).addEndpoint(readLocal).start()
+        basicRequest.get(uri"http://localhost:${binding.port}").send(backend).unsafeRunSync()
+      }
+      response.body shouldBe Right("set")
     }
 
   /** A request queued to the server's scope just before it fails is never run; that's not reproducible deterministically, hence only the
