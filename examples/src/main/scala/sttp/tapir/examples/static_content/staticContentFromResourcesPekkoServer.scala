@@ -23,7 +23,7 @@ import scala.io.StdIn
 
   // we're pretending to be a SPA application, that is we serve index.html if the requested resource cannot be found
   val resourceEndpoints = staticResourcesGetServerEndpoint[Future](emptyInput)(
-    this.getClass.getClassLoader,
+    Thread.currentThread().getContextClassLoader,
     "webapp",
     FilesOptions.default.defaultFile(List("index.html"))
   )

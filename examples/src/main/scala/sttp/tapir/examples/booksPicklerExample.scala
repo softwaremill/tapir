@@ -18,7 +18,7 @@ import scala.concurrent.duration.Duration
 
 @main def booksPicklerExample(): Unit =
   import org.slf4j.{Logger, LoggerFactory}
-  val logger: Logger = LoggerFactory.getLogger(this.getClass.getName)
+  val logger: Logger = LoggerFactory.getLogger("booksPicklerExample")
 
   type Limit = Option[Int]
   type AuthToken = String

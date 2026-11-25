@@ -24,7 +24,7 @@ import ox.either
 import ox.either.*
 
 @main def jsoniterStreamingNettySyncServer(): Unit =
-  val logger = LoggerFactory.getLogger(this.getClass)
+  val logger = LoggerFactory.getLogger("jsoniterStreamingNettySyncServer")
   case class Person(name: String, age: Int) derives ConfiguredJsonValueCodec
 
   val streamPeopleEndpoint = endpoint.post

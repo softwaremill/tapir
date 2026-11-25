@@ -25,7 +25,7 @@ import scala.io.StdIn
 import org.slf4j.{Logger, LoggerFactory}
 
 @main def datadogMetricsExample(): Unit =
-  val logger: Logger = LoggerFactory.getLogger(this.getClass.getName)
+  val logger: Logger = LoggerFactory.getLogger("datadogMetricsExample")
 
   case class Person(name: String)
 

@@ -15,7 +15,7 @@ import sttp.tapir.generic.auto.*
 
 @main def booksExample(): Unit =
   import org.slf4j.{Logger, LoggerFactory}
-  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger("booksExample")
 
   type Limit = Option[Int]
   type AuthToken = String
