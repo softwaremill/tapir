@@ -206,7 +206,7 @@ jobs:
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
       if: github.ref == 'refs/heads/master' # this should not run on PR builds
-      uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v6, specifically v7.10.0
+      uses: release-drafter/release-drafter@d1a19e60e81a7e650d00a7de9277f87e439117ea # v6, specifically v7.11.0
       with:
         config-name: release-drafter.yml
       env:
@@ -332,7 +332,7 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
         if: matrix.java == '17'
-        uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v6, specifically v7.10.0
+        uses: release-drafter/release-drafter@d1a19e60e81a7e650d00a7de9277f87e439117ea # v6, specifically v7.11.0
         with:
           config-name: release-drafter.yml
           publish: true
