@@ -81,7 +81,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           startFailureTest(eventLoopGroup),
           requestsNotStartedTest,
           cancelledBeforeStartTest
-        )
+        ) ++
+        forkLocalTests(eventLoopGroup)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -224,6 +225,22 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         result.failed.get shouldBe a[java.io.IOException] // not wrapped
       finally taken.close()
     }
+
+  /** Sync-only: server logic runs in forks which are nested in the scope in which the server is started. */
+  def forkLocalTests(eventLoopGroup: NioEventLoopGroup): List[Test] = List(true, false).map { interrupt =>
+    Test(s"server logic sees the fork local values of the scope in which the server is started (interruption: $interrupt)") {
+      val local = ForkLocal("default")
+      val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = interrupt)
+      val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+      val readLocal = endpoint.get.out(stringBody).handleSuccess(_ => local.get())
+      // fails instead of hanging
+      val response = timeout(20.seconds)(abandonOnInterrupt(local.supervisedWhere("set") {
+        val binding = NettySyncServer(options, config).addEndpoint(readLocal).start()
+        basicRequest.get(uri"http://localhost:${binding.port}").send(backend).unsafeRunSync()
+      }))
+      response.body shouldBe Right("set")
+    }
+  }
 
   /** A request queued to the server's scope just before it fails is never run; that's not reproducible deterministically, hence only the
     * bookkeeping is tested.
