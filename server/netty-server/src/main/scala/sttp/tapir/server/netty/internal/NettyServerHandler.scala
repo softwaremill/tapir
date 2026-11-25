@@ -152,7 +152,7 @@ class NettyServerHandler[F[_]](
       // an error response would be sent only after that response, which might never complete
       logger.error(s"Closing connection: no response produced within the request timeout of $timeoutDescription")
       val _ = ctx.close()
-    } else if (requestBodyTracker.forall(t => t.bodyFullyReceived || t.continueAwaited)) {
+    } else if (!requestBodyTracker.exists(_.oldestRequestBodyStalled)) {
       logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {

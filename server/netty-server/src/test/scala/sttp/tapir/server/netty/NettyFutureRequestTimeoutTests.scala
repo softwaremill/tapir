@@ -135,6 +135,27 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
       }.unsafeToFuture()
     },
+    Test("respond with status 503, not 408, for a slow but complete request followed by a pipelined incomplete one") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, slowBody.length) ++ slowBody ++ incompleteRequestHead(port))
+          status <- readStatusLine(socket)
+        } yield List(status)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 503 Service Unavailable")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 408 for an incomplete request pipelined after a complete one") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody ++ incompleteRequestHead(port))
+          first <- readStatusLine(socket)
+          second <- readStatusLine(socket)
+        } yield List(first, second)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
     // Netty-only, as the request timeout is: a missing body is the client's fault (408) only once it was sent a 100
     Test("respond with status 408 when the body isn't sent after 100 Continue") {
       statusLinesFromShortTimeoutServer { (socket, port) =>

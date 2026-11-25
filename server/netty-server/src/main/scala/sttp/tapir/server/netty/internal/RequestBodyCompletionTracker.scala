@@ -1,39 +1,40 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.channel.{ChannelDuplexHandler, ChannelHandlerContext, ChannelPromise}
-import io.netty.handler.codec.http.{HttpContent, HttpRequest, HttpResponse, HttpResponseStatus, HttpUtil, LastHttpContent}
+import io.netty.handler.codec.http.{HttpContent, HttpRequest, HttpResponse, HttpResponseStatus, HttpStatusClass, HttpUtil, LastHttpContent}
 
-/** Tracks whether the body of the request currently being handled has been received in full, and whether the client still awaits a
-  * `100 Continue` before sending it. This allows a firing request timeout to report 408 (client stalled mid-upload) instead of 503 (server
-  * too slow to respond). Has to be placed after the HTTP codec and before `HttpStreamsServerHandler`, which merges the [[HttpRequest]] /
-  * [[LastHttpContent]] messages this relies on into a single streamed request.
+import scala.collection.mutable
+
+/** Tracks, for each request whose response hasn't started yet, whether its body has been received in full, and whether the client still
+  * awaits a `100 Continue` before sending it. This allows a firing request timeout to report 408 (client stalled mid-upload) instead of 503
+  * (server too slow to respond). Has to be placed after the HTTP codec and before `HttpStreamsServerHandler`, which merges the
+  * [[HttpRequest]] / [[LastHttpContent]] messages this relies on into a single streamed request.
   *
-  * The state is per connection, not per request: with auto-read enabled, a pipelined request's headers can be decoded while the preceding
-  * request is still being handled, resetting it. That preceding request's timeout is then reported as 408 rather than 503; only the status
-  * code is affected.
+  * A request is tracked until its response starts being written. Responses are written in request order, so the oldest tracked request is
+  * the one awaiting a response. This holds also for responses written by other handlers, e.g. in custom pipelines.
   */
 private[netty] class RequestBodyCompletionTracker extends ChannelDuplexHandler {
 
-  // The initial value is never read in practice: the request timeout is armed only once a request's headers have passed through this
-  // handler, which sets the flag. `true` is the safe default, blaming the server (503) rather than the client (408).
-  private var _bodyFullyReceived: Boolean = true
-  private var _continueAwaited: Boolean = false
+  private class BodyState(var fullyReceived: Boolean, var continueAwaited: Boolean)
 
-  def bodyFullyReceived: Boolean = _bodyFullyReceived
+  private val states = mutable.Queue.empty[BodyState]
 
-  /** If true, the client is waiting for the server, so a missing body isn't the client's fault. */
-  def continueAwaited: Boolean = _continueAwaited
+  /** If true, the oldest request without a started response is still being received, and the client isn't waiting for a `100 Continue`; so
+    * a timeout is the client's fault. False if no request is tracked.
+    */
+  def oldestRequestBodyStalled: Boolean = states.headOption.exists(s => !s.fullyReceived && !s.continueAwaited)
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
-    // FullHttpRequest is both an HttpRequest and a LastHttpContent, so LastHttpContent has to be matched first
+    // body chunks concern the newest request, as a request's body is received before the next request
     msg match {
+      // FullHttpRequest is both an HttpRequest and a LastHttpContent
+      case r: HttpRequest     => states.enqueue(new BodyState(r.isInstanceOf[LastHttpContent], HttpUtil.is100ContinueExpected(r)))
       case _: LastHttpContent =>
-        _bodyFullyReceived = true
-        _continueAwaited = false
-      case r: HttpRequest =>
-        _bodyFullyReceived = false
-        _continueAwaited = HttpUtil.is100ContinueExpected(r)
-      case _: HttpContent => _continueAwaited = false // the client sends the body anyway
+        states.lastOption.foreach { s =>
+          s.fullyReceived = true
+          s.continueAwaited = false
+        }
+      case _: HttpContent => states.lastOption.foreach(_.continueAwaited = false) // the client sends the body anyway
       case _              => ()
     }
     val _ = ctx.fireChannelRead(msg)
@@ -41,8 +42,14 @@ private[netty] class RequestBodyCompletionTracker extends ChannelDuplexHandler {
 
   override def write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise): Unit = {
     msg match {
-      case r: HttpResponse if r.status() == HttpResponseStatus.CONTINUE => _continueAwaited = false
-      case _                                                            => ()
+      // `HttpStreamsServerHandler` sends a 100 only for the newest request, while no newer one is received
+      case r: HttpResponse if r.status() == HttpResponseStatus.CONTINUE => states.lastOption.foreach(_.continueAwaited = false)
+      // other interim responses (but not 101, which is the final one before switching protocols) are followed by the final response
+      case r: HttpResponse
+          if r.status().codeClass() == HttpStatusClass.INFORMATIONAL && r.status() != HttpResponseStatus.SWITCHING_PROTOCOLS =>
+        ()
+      case _: HttpResponse => if (states.nonEmpty) { val _ = states.dequeue() }
+      case _               => ()
     }
     val _ = ctx.write(msg, promise)
   }
