@@ -25,7 +25,7 @@ import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import ox.flow.Flow
 import scala.annotation.nowarn
-import sttp.tapir.server.netty.{NettyConfig, NettySyncRequestTimeoutTests}
+import sttp.tapir.server.netty.{NettyConfig, NettyServerStopTests, NettySyncRequestTimeoutTests}
 import sttp.model.sse.ServerSentEvent
 import java.nio.charset.StandardCharsets
 import java.util.UUID
@@ -69,9 +69,14 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         expectContinueTests(createServerTest, eventLoopGroup) ++
         List(scopeEndTest(eventLoopGroup)) ++
         fatalErrorTests(eventLoopGroup) ++
+        new NettyServerStopTests(eventLoopGroup) {
+          override def withServer[A](config: NettyConfig)(use: IO[Unit] => IO[A]): IO[A] =
+            IO.blocking(supervised {
+              val binding = NettySyncServer(config).start()
+              use(IO.blocking(binding.stop())).unsafeRunSync()
+            })
+        }.tests() ++
         List(
-          quietPeriodTest,
-          threadLeakTest(eventLoopGroup),
           startFailureTest(eventLoopGroup),
           requestsNotStartedTest,
           cancelledBeforeStartTest
@@ -291,26 +296,6 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           response.value should matchPattern { case Some(Failure(_: CancellationException)) => }
         finally unblockRunner.countDown()
       }
-    }
-
-  /** The other tests use a shared event loop group, which isn't shut down when the server stops. */
-  def quietPeriodTest: Test =
-    Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
-      val stopMillis = supervised {
-        val binding = NettySyncServer().port(0).start()
-        val start = System.nanoTime()
-        binding.stop()
-        (System.nanoTime() - start) / 1_000_000
-      }
-      stopMillis should be < 2000L
-    }
-
-  def threadLeakTest(eventLoopGroup: NioEventLoopGroup): Test =
-    Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
-      val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      threadsLeftBy("defaultEventExecutor")(IO.blocking(supervised(NettySyncServer(config).start().stop())))
-        .map(_ shouldBe empty)
-        .unsafeToFuture()
     }
 
   /** Sync-only: with server logic run in forks which aren't interrupted, their failure fails the server's scope. */

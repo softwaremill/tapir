@@ -44,6 +44,12 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           val tests =
             new AllServerTests(createServerTest, interpreter, backend, multipart = true, partOtherHeaderSupport = false).tests() ++
               new ServerGracefulShutdownTests(createServerTest).tests() ++
+              new NettyServerStopTests(eventLoopGroup) {
+                // not IO.fromFuture, which can't be timed out
+                override def withServer[A](config: NettyConfig)(use: IO[Unit] => IO[A]): IO[A] =
+                  IO.blocking(Await.result(NettyFutureServer(config)(using serverEc).start(), 10.seconds))
+                    .flatMap(server => use(IO.blocking(Await.result(server.stop(), 10.seconds))))
+              }.tests() ++
               new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
               additionalTests(backend, eventLoopGroup) ++
@@ -83,15 +89,6 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         }
         .unsafeToFuture()
     },
-    // the other tests use a shared event loop group, which isn't shut down when the server stops
-    Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
-      import cats.effect.unsafe.implicits.global
-
-      IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).start()))
-        .flatMap(server => IO.fromFuture(IO.delay(server.stop())).timed)
-        .map { case (stopDuration, _) => stopDuration should be < 2.seconds }
-        .unsafeToFuture()
-    },
     Test("a route throwing an exception, instead of returning a failed Future, should result in a 500, sent after the earlier responses") {
       import cats.effect.unsafe.implicits.global
 
@@ -123,27 +120,6 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
             List(response1, response2) shouldBe List((200, ""), (500, ""))
           }
         }
-        .unsafeToFuture()
-    },
-    Test("stopping a server more than once") {
-      import cats.effect.unsafe.implicits.global
-
-      // not IO.fromFuture, which can't be timed out
-      IO.blocking {
-        val server = Await.result(NettyFutureServer()(using ec).port(0).start(), 10.seconds)
-        Await.result(server.stop(), 10.seconds)
-        Await.result(server.stop(), 10.seconds)
-      }.map(_ => succeed)
-        .unsafeToFuture()
-    },
-    Test("stopping a server which doesn't shut down its event loop group releases the other threads it starts") {
-      import cats.effect.unsafe.implicits.global
-
-      val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
-      threadsLeftBy("defaultEventExecutor")(
-        IO.fromFuture(IO.delay(NettyFutureServer(config)(using ec).start())).flatMap(server => IO.fromFuture(IO.delay(server.stop())))
-      )
-        .map(_ shouldBe empty)
         .unsafeToFuture()
     },
     Test("the server handler fails, if it doesn't run on the channel's event loop") {
