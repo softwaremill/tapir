@@ -127,7 +127,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           finally conn.disconnect
         }
       },
-      // the only way for a request to fail, instead of resulting in a 500 response created by the exception interceptor
+      // the only way for a request to fail, instead of resulting in a 500 response created by the exception interceptor; with interruption
+      // enabled (the default), server logic runs in unsupervised forks, so a fatal error doesn't stop the server
       createServerTest.testServerLogic(
         endpoint.get
           .in(query[Boolean]("fail"))
