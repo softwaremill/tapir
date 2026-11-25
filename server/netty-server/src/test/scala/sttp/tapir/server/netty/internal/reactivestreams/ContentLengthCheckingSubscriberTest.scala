@@ -3,9 +3,9 @@ package sttp.tapir.server.netty.internal.reactivestreams
 import cats.effect.IO
 import cats.effect.unsafe.IORuntime
 import fs2.Stream
-import fs2.interop.reactivestreams._
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
+import org.reactivestreams.FlowAdapters
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.server.model.IncompleteRequestBodyException
@@ -22,10 +22,10 @@ class ContentLengthCheckingSubscriberTest extends AnyFreeSpec with Matchers {
       .chunkLimit(4)
       .map[HttpContent](ch => new DefaultHttpContent(Unpooled.wrappedBuffer(ch.toArray)))
       .covary[IO]
-      .toUnicastPublisher
+      .toPublisherResource
       .use { publisher =>
         val subscriber = new SimpleSubscriber(Some(contentLength))
-        publisher.subscribe(new ContentLengthCheckingSubscriber(contentLength, subscriber))
+        publisher.subscribe(FlowAdapters.toFlowSubscriber(new ContentLengthCheckingSubscriber(contentLength, subscriber)))
         IO.blocking(Await.result(subscriber.future, 5.seconds))
       }
       .attempt
