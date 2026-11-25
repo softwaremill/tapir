@@ -4,9 +4,9 @@ import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.effect.unsafe.IORuntime
 import fs2.Stream
-import fs2.interop.reactivestreams._
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.DefaultHttpContent
+import org.reactivestreams.FlowAdapters
 import org.scalactic.source.Position
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -41,12 +41,12 @@ class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
       .chunkLimit(publishedChunkLimit)
       .map(ch => new DefaultHttpContent(Unpooled.wrappedBuffer(ch.toByteBuffer)))
       .covary[IO]
-      .toUnicastPublisher
+      .toPublisherResource
 
     val io = publisherResource.use { publisher =>
       IO {
         val subscriberInputStream = new SubscriberInputStream(maxBufferedChunks)
-        publisher.subscribe(subscriberInputStream)
+        publisher.subscribe(FlowAdapters.toFlowSubscriber(subscriberInputStream))
         readAll(subscriberInputStream, readBatchSize) shouldBe bytes
       }
     }
@@ -95,13 +95,13 @@ class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
           case Resource.ExitCase.Canceled => IO { canceled = true }
           case _                          => IO.unit
         }
-        .toUnicastPublisher
+        .toPublisherResource
 
     publisherResource
       .use(publisher =>
         IO {
           val stream = new SubscriberInputStream()
-          publisher.subscribe(stream)
+          publisher.subscribe(FlowAdapters.toFlowSubscriber(stream))
 
           stream.readNBytes(120).length shouldBe 120
           stream.close()

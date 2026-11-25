@@ -3,8 +3,8 @@ package sttp.tapir.server.netty.internal.reactivestreams
 import cats.effect.IO
 import cats.effect.unsafe.IORuntime
 import fs2.Stream
-import fs2.interop.reactivestreams._
 import io.netty.handler.codec.http.HttpContent
+import org.reactivestreams.FlowAdapters
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -17,10 +17,10 @@ class SimpleSubscriberTest extends AnyFreeSpec with Matchers {
   "completes with an empty body when no chunks are received and no Content-Length is declared" in {
     Stream.empty
       .covaryAll[IO, HttpContent]
-      .toUnicastPublisher
+      .toPublisherResource
       .use { publisher =>
         val subscriber = new SimpleSubscriber(None)
-        publisher.subscribe(subscriber)
+        publisher.subscribe(FlowAdapters.toFlowSubscriber(subscriber))
         IO.blocking(Await.result(subscriber.future, 5.seconds))
       }
       .unsafeRunSync() shouldBe empty
