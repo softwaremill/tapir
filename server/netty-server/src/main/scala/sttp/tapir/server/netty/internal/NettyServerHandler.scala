@@ -64,7 +64,7 @@ class NettyServerHandler[F[_]](
   // in.
   private var lastResponseSent: Future[Unit] = Future.unit
 
-  // Functions cancelling the routes which are still running; all are called when the connection closes.
+  // Functions cancelling the requests whose response hasn't started being written; all are called when the connection closes.
   private val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
@@ -74,10 +74,6 @@ class NettyServerHandler[F[_]](
   // Requests received, for which the response isn't fully sent yet. When the server is shutting down, the connection is closed once this
   // drops to 0.
   private var requestsInFlight = 0
-
-  // Requests received, for which writing the response hasn't started yet. When the server is shutting down, only the last response
-  // has `Connection: close`, so that the responses to pipelined requests are still sent.
-  private var responsesNotStarted = 0
 
   // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
   // exceeded request timeout is always reported as 503, rather than 408.
@@ -151,7 +147,7 @@ class NettyServerHandler[F[_]](
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
     // a started response, which isn't fully sent yet
-    val writingResponse = requestsInFlight > responsesNotStarted
+    val writingResponse = requestsInFlight > pendingResponses.length
     if (writingResponse) {
       // an error response would be sent only after that response, which might never complete
       logger.error(s"Closing connection: no response produced within the request timeout of $timeoutDescription")
@@ -228,11 +224,9 @@ class NettyServerHandler[F[_]](
     val (runningFuture, cancellationSwitch) = startRoute(ctx, req)
     pendingResponses.enqueue(cancellationSwitch)
     requestsInFlight += 1
-    responsesNotStarted += 1
     // the failure of a previous response is already handled, and mustn't prevent sending later ones
     lastResponseSent = lastResponseSent.transformWith { _ =>
       runningFuture.transform { result =>
-        responsesNotStarted -= 1
         val _ = pendingResponses.dequeueFirst(_ eq cancellationSwitch)
         def cleanUp(responseWritten: Option[ChannelFuture]): Unit = {
           releaseReq()
@@ -544,7 +538,8 @@ class NettyServerHandler[F[_]](
     }
 
     def handleCloseAndKeepAliveHeaders(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request) || (isShuttingDown.get() && responsesNotStarted == 0))
+      // when shutting down, only the last response closes the connection, so that the responses to pipelined requests are still sent
+      if (!HttpUtil.isKeepAlive(request) || (isShuttingDown.get() && pendingResponses.isEmpty))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
       else if (request.protocolVersion.equals(HttpVersion.HTTP_1_0))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
