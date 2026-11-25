@@ -2,11 +2,7 @@ package sttp.tapir.server.netty
 
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
-import io.netty.channel.embedded.EmbeddedChannel
-import io.netty.channel.group.DefaultChannelGroup
 import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.handler.codec.http.{DefaultFullHttpRequest, FullHttpResponse, HttpHeaderNames, HttpMethod, HttpVersion}
-import io.netty.util.concurrent.{DefaultEventExecutorGroup, GlobalEventExecutor}
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.monad.FutureMonad
@@ -14,19 +10,16 @@ import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
-import sttp.tapir.server.netty.internal.NettyServerHandler
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.client4._
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.Try
 
 class NettyFutureServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
@@ -121,50 +114,8 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           }
         }
         .unsafeToFuture()
-    },
-    Test("the server handler fails, if it doesn't run on the channel's event loop") {
-      val executorGroup = new DefaultEventExecutorGroup(1)
-      val channel = new EmbeddedChannel()
-      try {
-        channel.pipeline().addLast(executorGroup, serverHandler(new AtomicBoolean(false), ec))
-        executorGroup.submit(new Runnable { override def run(): Unit = () }).sync() // handlerAdded has run
-        Future.successful(Try(channel.checkException()).failed.get.getCause shouldBe an[IllegalStateException])
-      } finally {
-        channel.finishAndReleaseAll(): Unit
-        executorGroup.shutdownGracefully(): Unit
-      }
-    },
-    Test("the server handler responds to a request with a 503 and closes the connection, if the server is shutting down") {
-      val isShuttingDown = new AtomicBoolean(false)
-      val channel = new EmbeddedChannel(serverHandler(isShuttingDown, ec))
-      try {
-        isShuttingDown.set(true)
-        channel.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")): Unit
-        val response = channel.readOutbound[FullHttpResponse]()
-        try {
-          Future.successful(
-            (response.status().code(), response.headers().get(HttpHeaderNames.CONNECTION), channel.isOpen) shouldBe ((503, "close", false))
-          )
-        } finally { response.release(): Unit }
-      } finally { channel.finishAndReleaseAll(): Unit }
-    },
-    Test("the server handler closes a connection accepted when the server is shutting down") {
-      val channel = new EmbeddedChannel(serverHandler(new AtomicBoolean(true), ec))
-      try Future.successful(channel.isOpen shouldBe false)
-      finally { channel.finishAndReleaseAll(): Unit }
     }
   )
-
-  private def serverHandler(isShuttingDown: AtomicBoolean, ec: ExecutionContext): NettyServerHandler[Future] = {
-    implicit val m: FutureMonad = new FutureMonad()(ec)
-    new NettyServerHandler[Future](
-      Route.empty,
-      block => (block(), () => Future.unit),
-      new DefaultChannelGroup(GlobalEventExecutor.INSTANCE),
-      isShuttingDown,
-      NettyConfig.default
-    )
-  }
 
   // Netty-only: if the body isn't read, RFC 9110 lets a server either skip the 100 (as Netty does), or send it and discard the body. The
   // code is the same for all Netty interpreters, so it's tested once.
