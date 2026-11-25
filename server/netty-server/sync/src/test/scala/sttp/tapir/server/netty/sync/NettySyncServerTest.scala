@@ -201,17 +201,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         .randomPort
         .withDontShutdownEventLoopGroupOnClose
         .withGracefulShutdownTimeout(10.seconds)
-      // in a separate thread, so that the test fails instead of hanging, if the scope doesn't end
-      val result = new CompletableFuture[Try[(Boolean, Future[Response[Either[String, String]]])]]()
-      Thread.startVirtualThread { () =>
-        result.complete(Try(supervised {
-          val binding = NettySyncServer(config).addEndpoint(slow).start()
-          val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
-          val requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
-          (requestArrived, response) // the scope ends while the request is in flight
-        })).discard
-      }.discard
-      val (requestArrived, response) = result.get(20, TimeUnit.SECONDS).get
+      // fails instead of hanging, if the scope doesn't end
+      val (requestArrived, response) = timeout(20.seconds)(abandonOnInterrupt(supervised {
+        val binding = NettySyncServer(config).addEndpoint(slow).start()
+        val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
+        val requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
+        (requestArrived, response) // the scope ends while the request is in flight
+      }))
       assert(requestArrived)
       response.map(_.body shouldBe Right("done"))
     }
@@ -223,10 +219,9 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       val taken = new java.net.ServerSocket(0, 50, java.net.InetAddress.getByName("localhost"))
       try
         val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).port(taken.getLocalPort).withDontShutdownEventLoopGroupOnClose
-        // in a separate thread, so that the test fails instead of hanging, if start() doesn't return
-        val result = new CompletableFuture[Try[Int]]()
-        Thread.startVirtualThread(() => result.complete(Try(supervised(NettySyncServer(config).start().port))).discard).discard
-        result.get(10, TimeUnit.SECONDS).failed.get shouldBe a[java.io.IOException] // not wrapped
+        // fails instead of hanging, if start() doesn't return
+        val result = Try(timeout(10.seconds)(abandonOnInterrupt(supervised(NettySyncServer(config).start().port))))
+        result.failed.get shouldBe a[java.io.IOException] // not wrapped
       finally taken.close()
     }
 
