@@ -11,6 +11,43 @@ env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
   SBT_OPTS: -Xms4g -Xmx4g
 jobs:
+  # Downloads the dependencies of all `ci` matrix entries into one cache, which the `ci` jobs only restore. Otherwise,
+  # the first `ci` job to finish would save a cache with only its own dependencies.
+  deps-cache:
+    # same condition as for `ci`
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      github.event.pull_request.user.login == 'softwaremill-ci' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+    - uses: sbt/setup-sbt@7e114eae4f32ec3f93c851c2793376a77f384409 # v1, specifically v1.5.15
+    - name: Set up JDK
+      uses: actions/setup-java@v6.3.0
+      with:
+        distribution: 'temurin'
+        java-version: 21
+    - name: Cache dependencies
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.cache/coursier
+          ~/.ivy2/cache
+          ~/.sbt
+        key: sbt-deps-${{ hashFiles('**/*.sbt', '**/project/build.properties', '**/project/**.scala', '**/project/**.sbt') }}
+        restore-keys: sbt-deps-
+    - name: Resolve dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      # the env vars change which projects are aggregated; the sbt server keeps the env it was started with, hence the
+      # `shutdown` before the next run
+      run: |
+        STTP_NATIVE=1 sbt -v "update; shutdown"
+        ONLY_LOOM=1 sbt -v "update; shutdown"
+
   ci:
     # run on 1) push, 2) external PRs, 3) github-actions PRs
     # do not run on internal, non-steward PRs since those will be run by push to branch
@@ -19,6 +56,7 @@ jobs:
       github.event.pull_request.head.repo.full_name != github.repository ||
       github.event.pull_request.user.login == 'softwaremill-ci' ||
       github.event.pull_request.user.login == 'dependabot[bot]'
+    needs: deps-cache
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -43,8 +81,15 @@ jobs:
       uses: actions/setup-java@v6.3.0
       with:
         distribution: 'temurin'
-        cache: 'sbt'
         java-version: ${{ matrix.java }}
+    - name: Restore dependencies cache
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ~/.cache/coursier
+          ~/.ivy2/cache
+          ~/.sbt
+        key: sbt-deps-${{ hashFiles('**/*.sbt', '**/project/build.properties', '**/project/**.scala', '**/project/**.sbt') }}
     - name: Install sam cli
       if: matrix.java == '17'
       run: |
@@ -168,11 +213,36 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # identify binary incompatibilities (check build.sbt for details)
+  # not using softwaremill/github-actions-workflows/.github/workflows/mima.yml, as it saves its own dependencies cache
   mima:
-    uses: softwaremill/github-actions-workflows/.github/workflows/mima.yml@main
-    with:
-      java-version: '21'
-      java-opts: '-Xms4g -Xmx4g' # SBT_OPTS env parameter
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      github.event.pull_request.user.login == 'softwaremill-ci' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    needs: deps-cache
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0 # tags are needed to find the previous version
+    - uses: sbt/setup-sbt@7e114eae4f32ec3f93c851c2793376a77f384409 # v1, specifically v1.5.15
+    - name: Set up JDK
+      uses: actions/setup-java@v6.3.0
+      with:
+        distribution: 'temurin'
+        java-version: 21
+    - name: Restore dependencies cache
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ~/.cache/coursier
+          ~/.ivy2/cache
+          ~/.sbt
+        key: sbt-deps-${{ hashFiles('**/*.sbt', '**/project/build.properties', '**/project/**.scala', '**/project/**.sbt') }}
+    - name: Check MiMa
+      run: sbt -v mimaReportBinaryIssues
 
   codegen-sbt-plugin:
     name: OpenAPI codegen sbt plugin
@@ -181,6 +251,7 @@ jobs:
       github.event.pull_request.head.repo.full_name != github.repository ||
       github.event.pull_request.user.login == 'softwaremill-ci' ||
       github.event.pull_request.user.login == 'dependabot[bot]'
+    needs: deps-cache
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -194,8 +265,15 @@ jobs:
       uses: actions/setup-java@v6.3.0
       with:
         distribution: 'temurin'
-        cache: 'sbt'
         java-version: ${{ matrix.java }}
+    - name: Restore dependencies cache
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ~/.cache/coursier
+          ~/.ivy2/cache
+          ~/.sbt
+        key: sbt-deps-${{ hashFiles('**/*.sbt', '**/project/build.properties', '**/project/**.scala', '**/project/**.sbt') }}
     - name: Test the sbt 1 and sbt 2 plugins
       run: sbt -v "openapiCodegenSbt2_12/scripted ; openapiCodegenSbt/scripted"
 
@@ -216,7 +294,14 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-          cache: 'sbt'
+      - name: Restore dependencies cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.ivy2/cache
+            ~/.sbt
+          key: sbt-deps-${{ hashFiles('**/*.sbt', '**/project/build.properties', '**/project/**.scala', '**/project/**.sbt') }}
       - name: Install libidn2-dev libcurl3-dev
         if: matrix.java == '17'
         run: |
