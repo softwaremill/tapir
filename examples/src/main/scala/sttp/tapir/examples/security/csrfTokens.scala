@@ -6,7 +6,7 @@
 
 package sttp.tapir.examples.security
 
-import ox.{supervised, useInScope}
+import ox.supervised
 import sttp.client4.*
 import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.{HeaderNames, StatusCode}
@@ -98,13 +98,11 @@ object SessionManager:
 
   supervised {
     // starting the server
-    val binding = useInScope(
-      NettySyncServer()
-        .addEndpoint(loginEndpoint)
-        .addEndpoint(changePasswordFormEndpoint)
-        .addEndpoint(changePasswordEndpoint)
-        .start()
-    )(_.stop())
+    val binding = NettySyncServer()
+      .addEndpoint(loginEndpoint)
+      .addEndpoint(changePasswordFormEndpoint)
+      .addEndpoint(changePasswordEndpoint)
+      .start()
     println(s"Server started on http://${binding.hostName}:${binding.port}/hello?name=...!")
 
     // testing

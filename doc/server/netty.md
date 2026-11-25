@@ -62,6 +62,35 @@ type inference.
 To learn more about handling concurrency and streaming with Ox and `Flow`s, see
 its [documentation](https://ox.softwaremill.com/).
 
+### Stopping the server
+
+A server started using `start()` runs until the scope in which it was started
+ends, or until `stop()` is called on the returned binding. In both cases, it's
+stopped gracefully (see [graceful shutdown](#graceful-shutdown)). Calling
+`stop()` is needed only to stop the server before its scope ends, e.g. when that
+scope lasts for the whole application. Alternatively, start the server in a
+nested scope, which ends when the server should stop.
+
+## Graceful shutdown
+
+When a server is stopped, e.g. using the binding's `stop()` method, it:
+
+* stops accepting new connections, and closes idle ones right away
+* lets in-flight requests complete, closing each connection once its last
+  response is sent. New requests get a 503, or are dropped if they follow other
+  requests on the same connection which are still running
+* sends web sockets a close frame with status 1001 (Going Away). Frames which
+  the server logic sends after it are dropped. Once the client answers the
+  close frame, the connection is closed, and the web socket's pipe is
+  stopped
+* once all connections are closed, or the graceful shutdown timeout passes (see
+  [below](#server-socket-configuration)), closes the remaining connections, and
+  releases the server's resources
+
+As new connections are refused right away, behind a load balancer, first take
+the instance out of rotation (e.g. fail the readiness check) and wait until the
+load balancer stops sending new connections, then stop the server.
+
 ## Configuration
 
 The interpreters can be configured by providing an
@@ -103,16 +132,15 @@ customise the server socket, such as:
 * request timeout, see [request timeout](#request-timeout) below
 * connection timeout
 * linger timeout
-* graceful shutdown timeout: when stopped e.g. using
-  `NettySyncServerBinding.stop()`, it's ensured that the server will wait at
-  most 10 seconds for in-flight requests to complete, while rejecting all new
-  requests with 503 during this period; afterwards, all server resources are
-  closed
+* graceful shutdown timeout: how long a stopped server waits for in-flight
+  requests and web sockets to finish, 10 seconds by default; see
+  [graceful shutdown](#graceful-shutdown)
 * server header
 * maximum number of connections
 * custom netty pipeline & low-level logging handlers; a custom pipeline should
   use `TapirHttpStreamsServerHandler` instead of `HttpStreamsServerHandler`, as
-  otherwise `Expect: 100-continue` requests with streamed bodies might hang
+  otherwise `Expect: 100-continue` requests with streamed bodies might hang;
+  tapir's handler must be added without an executor group
 
 For example, to change the request timeout:
 
@@ -130,7 +158,8 @@ also bounds how long the client has to send the body: keep it higher than your
 longest upload, and lower than `idleTimeout`. When exceeded, an empty response
 with `Connection: close` is sent and the connection is closed - `503` if the
 request had been received in full or the client awaits `100 Continue`, `408` if
-the client stalled sending the body.
+the client stalled sending the body. If a response to an earlier request on the
+connection is still being sent, the connection is only closed.
 Ignored for Web Sockets, once the handshake has been established.
 
 ## Web sockets

@@ -55,10 +55,10 @@ import scala.concurrent.duration.*
     s"Received $count bytes"
 
   supervised:
-    val binding = NettySyncServer()
+    NettySyncServer()
       .addEndpoints(List(receiveServerEndpoint, sendServerEndpoint))
       .start()
-    releaseAfterScope(binding.stop())
+      .discard
 
     println(s"Server started at http://localhost:8080")
 

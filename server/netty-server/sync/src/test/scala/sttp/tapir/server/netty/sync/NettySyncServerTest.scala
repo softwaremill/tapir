@@ -17,20 +17,22 @@ import sttp.model.*
 import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.tests.*
 import sttp.tapir.tests.*
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import ox.flow.Flow
 import scala.annotation.nowarn
-import sttp.tapir.server.netty.{NettyConfig, NettySyncRequestTimeoutTests}
+import sttp.tapir.server.netty.{NettyConfig, NettyServerStopTests, NettySyncRequestTimeoutTests}
 import sttp.model.sse.ServerSentEvent
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import scala.util.Random
+import java.util.concurrent.{CancellationException, CompletableFuture, CountDownLatch, TimeUnit}
+import scala.util.{Failure, Random, Success, Try}
 import sttp.tapir.server.netty.OxServerSentEvents.parseBytesToSSE
+import sttp.tapir.server.netty.sync.internal.RequestsNotStarted
 
 class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
@@ -47,22 +49,39 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       backend,
       new NettySyncTestServerInterpreter(eventLoopGroup, interruptServerLogicWhenRequestCancelled = false)
     )
-    val sleeper: Sleeper[Identity] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
+
+    val webSocketTests = new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
+      override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
+      override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
+    }
 
     val tests =
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
         .tests() ++
-        new ServerGracefulShutdownTests(createServerTest, sleeper).tests() ++
+        new ServerGracefulShutdownTests(createServerTest).tests() ++
         new ServerStreamingTests(createServerTest).tests(OxStreams)(_.runDrain()) ++
-        new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
-          override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
-          override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
-        }.tests() ++
+        webSocketTests.tests() ++
+        webSocketTests.gracefulShutdownTests(_ => Flow.tick(100.millis, "tick")) ++
+        webSocketTests.unsupportedVersionTests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest) ++
-        expectContinueTests(createServerTest, eventLoopGroup)
+        expectContinueTests(createServerTest, eventLoopGroup) ++
+        List(scopeEndTest(eventLoopGroup)) ++
+        fatalErrorTests(eventLoopGroup) ++
+        new NettyServerStopTests(eventLoopGroup) {
+          override def withServer[A](config: NettyConfig)(use: IO[Unit] => IO[A]): IO[A] =
+            IO.blocking(supervised {
+              val binding = NettySyncServer(config).start()
+              use(IO.blocking(binding.stop())).unsafeRunSync()
+            })
+        }.tests() ++
+        List(
+          startFailureTest(eventLoopGroup),
+          requestsNotStartedTest,
+          cancelledBeforeStartTest
+        )
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -108,6 +127,24 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           finally conn.disconnect
         }
       },
+      // the only way for a request to fail, instead of resulting in a 500 response created by the exception interceptor; with interruption
+      // enabled (the default), server logic runs in unsupervised forks, so a fatal error doesn't stop the server
+      createServerTest.testServerLogic(
+        endpoint.get
+          .in(query[Boolean]("fail"))
+          .out(stringBody)
+          .handleSuccess(fail => if fail then throw new LinkageError("boom") else "ok"),
+        "respond with 500 to a request failing with a fatal error, and handle later requests on the same connection"
+      ) { (_, baseUri) =>
+        rawSocket(baseUri.port.get).use { socket =>
+          for {
+            _ <- sendRaw(socket, rawGet("/?fail=true"))
+            response1 <- readRawResponse(socket)
+            _ <- sendRaw(socket, rawGet("/?fail=false"))
+            response2 <- readRawResponse(socket)
+          } yield List(response1, response2) shouldBe List((500, ""), (200, "ok"))
+        }
+      },
       // #5150: large InputStream responses previously caused StackOverflowError due to recursive readNextChunkIfNeeded
       createServerTest.testServerLogic(
         endpoint.get
@@ -121,6 +158,211 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .response(asByteArrayAlways)
           .send(backend)
           .map(_.body.length shouldBe 10 * 1024 * 1024)
+      }, {
+        // the sync version of ServerCancellationTests, which needs a cats Async instance
+        val started = new CountDownLatch(1)
+        val interrupted = new CountDownLatch(1)
+        createServerTest.testServerLogic(
+          endpoint.get
+            .out(stringBody)
+            .handleSuccess { _ =>
+              started.countDown()
+              try
+                Thread.sleep(15000)
+                "done"
+              catch
+                case e: InterruptedException =>
+                  interrupted.countDown()
+                  throw e
+            },
+          "client disconnecting interrupts the server logic"
+        ) { (_, baseUri) =>
+          for {
+            startedBeforeDisconnect <- rawSocket(baseUri.port.get).use { socket =>
+              sendRaw(socket, rawGet()) >> IO.blocking(started.await(10, TimeUnit.SECONDS))
+            }
+            wasInterrupted <- IO.blocking(interrupted.await(10, TimeUnit.SECONDS))
+          } yield (startedBeforeDisconnect, wasInterrupted) shouldBe ((true, true))
+        }
+      }
+    )
+
+  /** Sync-only: when the scope in which the server is started ends, in-flight requests should complete before they are interrupted. */
+  def scopeEndTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("Server completes in-flight requests when the enclosing scope ends") {
+      val requestReceived = new CountDownLatch(1)
+      val slow = endpoint.get.in("slow").out(stringBody).handleSuccess { _ =>
+        requestReceived.countDown()
+        Thread.sleep(2000)
+        "done"
+      }
+      val config = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .withGracefulShutdownTimeout(10.seconds)
+      // in a separate thread, so that the test fails instead of hanging, if the scope doesn't end
+      val result = new CompletableFuture[Try[(Boolean, Future[Response[Either[String, String]]])]]()
+      Thread.startVirtualThread { () =>
+        result.complete(Try(supervised {
+          val binding = NettySyncServer(config).addEndpoint(slow).start()
+          val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
+          val requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
+          (requestArrived, response) // the scope ends while the request is in flight
+        })).discard
+      }.discard
+      val (requestArrived, response) = result.get(20, TimeUnit.SECONDS).get
+      assert(requestArrived)
+      response.map(_.body shouldBe Right("done"))
+    }
+
+  /** Sync-only: the server is started in a fork, from which a start failure is passed to the caller. */
+  def startFailureTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("start() throws the error, if the server can't be started") {
+      // the same address as the server's, as e.g. macOS allows binding to it, if the port is taken on the wildcard address
+      val taken = new java.net.ServerSocket(0, 50, java.net.InetAddress.getByName("localhost"))
+      try
+        val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).port(taken.getLocalPort).withDontShutdownEventLoopGroupOnClose
+        // in a separate thread, so that the test fails instead of hanging, if start() doesn't return
+        val result = new CompletableFuture[Try[Int]]()
+        Thread.startVirtualThread(() => result.complete(Try(supervised(NettySyncServer(config).start().port))).discard).discard
+        result.get(10, TimeUnit.SECONDS).failed.get shouldBe a[java.io.IOException] // not wrapped
+      finally taken.close()
+    }
+
+  /** A request queued to the server's scope just before it fails is never run; that's not reproducible deterministically, hence only the
+    * bookkeeping is tested.
+    */
+  def requestsNotStartedTest: Test =
+    Test("requests which haven't started when the server's scope fails are failed") {
+      val requests = new RequestsNotStarted
+      val (started, notStarted, addedAfterFailure) = (Promise[Unit](), Promise[Unit](), Promise[Unit]())
+      requests.add(started)
+      requests.add(notStarted)
+      requests.remove(started)
+      requests.scopeFailed()
+      requests.add(addedAfterFailure)
+      List(started, notStarted, addedAfterFailure).map(_.isCompleted) shouldBe List(false, true, true)
+    }
+
+  /** Otherwise, the request isn't released, as that's done once the response completes. Not reachable reliably with a real client. */
+  def cancelledBeforeStartTest: Test =
+    Test("the response to a request cancelled before its server logic starts is completed") {
+      supervised {
+        val runner = inScopeRunner()
+        val unblockRunner = new CountDownLatch(1)
+        // the runner runs functions one at a time, so the server logic can't start until this one ends
+        runner.async(unblockRunner.await())
+        try
+          val (response, cancel) = NettySyncServer().unsafeRunF(runner, new RequestsNotStarted)(() => ServerResponse.notFound)
+          cancel().discard
+          response.value should matchPattern { case Some(Failure(_: CancellationException)) => }
+        finally unblockRunner.countDown()
+      }
+    }
+
+  /** Sync-only: with server logic run in forks which aren't interrupted, their failure fails the server's scope. */
+  def fatalErrorTests(eventLoopGroup: NioEventLoopGroup): List[Test] =
+    val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = false)
+    val config = NettyConfig.default
+      .eventLoopGroup(eventLoopGroup)
+      .randomPort
+      .withDontShutdownEventLoopGroupOnClose
+      .withGracefulShutdownTimeout(10.seconds)
+
+    /** Returns the error with which the enclosing scope ended, and the server's port. */
+    def runServer(es: ServerEndpoint[OxStreams & WebSockets, Identity]*)(body: NettySyncServerBinding => Unit): (Option[Throwable], Int) =
+      runServerStoppedBy(start = server => server.start())(es*)(body)
+
+    def runServerStoppedBy(start: NettySyncServer => Ox ?=> NettySyncServerBinding)(es: ServerEndpoint[OxStreams & WebSockets, Identity]*)(
+        body: NettySyncServerBinding => Unit
+    ): (Option[Throwable], Int) =
+      var port = 0
+      val scopeError =
+        try
+          supervised {
+            val binding = start(NettySyncServer(options, config).addEndpoints(es.toList))
+            port = binding.port
+            body(binding)
+            sleep(10.seconds)
+          }
+          None
+        catch case e: Throwable => Some(e)
+      (scopeError, port)
+
+    def send(port: Int, path: String = ""): Future[Response[Either[String, String]]] =
+      basicRequest.get(uri"http://localhost:$port/$path").send(backend).unsafeToFuture()
+
+    List(
+      Test("A fatal error in server logic ends the enclosing scope, once a 500 is sent, and stops the server") {
+        val error = new LinkageError("boom")
+        val response = scala.concurrent.Promise[Response[Either[String, String]]]()
+        val (scopeError, port) = runServer(endpoint.get.out(stringBody).handleSuccess(_ => throw error)) { binding =>
+          response.completeWith(send(binding.port))
+        }
+        scopeError shouldBe Some(error)
+        connectionRefused(port).unsafeRunSync() shouldBe true
+        response.future.map(_.code shouldBe StatusCode.InternalServerError)
+      }, {
+        val error = new LinkageError("boom")
+        Test("A fatal error in server logic ends the enclosing scope with that error, also when the server is stopped in a finalizer") {
+          val (scopeError, _) =
+            runServerStoppedBy(start = server => useInScope(server.start())(_.stop()))(
+              endpoint.get.out(stringBody).handleSuccess(_ => throw error)
+            ) { binding => send(binding.port).discard }
+          scopeError shouldBe Some(error)
+        }
+      }, {
+        val error = new LinkageError("boom")
+        val requestReceived = new CountDownLatch(1)
+        val failRequest = new CountDownLatch(1)
+        val failing = endpoint.get.out(stringBody).handleSuccess { _ =>
+          requestReceived.countDown()
+          failRequest.await(10, TimeUnit.SECONDS).discard
+          throw error
+        }
+        Test("A fatal error in server logic while stopping ends the enclosing scope, and fails stop()") {
+          val response = scala.concurrent.Promise[Response[Either[String, String]]]()
+          // not using IO or Future, which don't complete on fatal errors
+          val stopResult = new CompletableFuture[Unit]()
+          var requestArrived = false
+          val (scopeError, _) = runServer(failing) { binding =>
+            response.completeWith(send(binding.port))
+            requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
+            Thread.startVirtualThread { () =>
+              try stopResult.complete(binding.stop()).discard
+              catch case e: Throwable => stopResult.completeExceptionally(e).discard
+            }.discard
+            awaitConnectionsRefused(binding.port).timeout(5.seconds).unsafeRunSync()
+            failRequest.countDown()
+          }
+          assert(requestArrived)
+          scopeError shouldBe Some(error)
+          Try(stopResult.get(15, TimeUnit.SECONDS)).failed.map(_.getCause.getCause) shouldBe Success(error)
+          response.future.map(_.code shouldBe StatusCode.InternalServerError)
+        }
+      },
+      {
+        val error = new LinkageError("boom")
+        val slowReceived = new CountDownLatch(1)
+        val slow = endpoint.get.in("slow").out(stringBody).handleSuccess { _ =>
+          slowReceived.countDown()
+          Thread.sleep(30000) // interrupted when the server's scope fails
+          "done"
+        }
+        val failing = endpoint.get.in("fail").out(stringBody).handleSuccess(_ => throw error)
+        Test("When the server's scope fails, the requests which it interrupts get a 500") {
+          val slowResponse = scala.concurrent.Promise[Response[Either[String, String]]]()
+          var slowArrived = false
+          val (scopeError, _) = runServer(slow, failing) { binding =>
+            slowResponse.completeWith(send(binding.port, "slow"))
+            slowArrived = slowReceived.await(10, TimeUnit.SECONDS)
+            send(binding.port, "fail").discard
+          }
+          assert(slowArrived)
+          scopeError shouldBe Some(error)
+          slowResponse.future.map(_.code shouldBe StatusCode.InternalServerError)
+        }
       }
     )
 
@@ -138,7 +380,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         supervised {
           val config =
             NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
-          val binding = useInScope(NettySyncServer(config).addEndpoints(es).start())(_.stop())
+          val binding = NettySyncServer(config).addEndpoints(es).start()
           Future.successful(runTest(binding.port).unsafeRunSync())
         }
       }

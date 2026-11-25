@@ -1,8 +1,7 @@
 package sttp.tapir.server.netty.cats
 
-import cats.effect.kernel.Sync
 import cats.effect.std.Dispatcher
-import cats.effect.{Async, IO, Resource, Temporal}
+import cats.effect.{Async, IO, Outcome, Resource}
 import cats.syntax.all._
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
@@ -15,7 +14,7 @@ import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -23,7 +22,6 @@ import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 case class NettyCatsServer[F[_]: Async](
     serverEndpoints: Vector[ServerEndpoint[Fs2Streams[F] & WebSockets, F]],
@@ -82,100 +80,70 @@ case class NettyCatsServer[F[_]: Async](
   private def unsafeRunAsync(block: () => F[ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
     options.dispatcher.unsafeToFutureCancelable(block())
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] = {
-    val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
-    implicit val monadError: MonadError[F] = new CatsMonadError[F]()
-    val endpointRoute = serverEndpoints match {
-      case Vector() => Vector.empty
-      case _        => Vector(NettyCatsServerInterpreter(options).toRoute(serverEndpoints.toList))
-    }
-    val allRoutes = endpointRoute ++ otherRoutes
-    val route = allRoutes match {
-      case Vector()  => Route.empty
-      case Vector(r) => r
-      case many      => Route.combine(many)
-    }
-    val eventExecutor = new DefaultEventExecutor()
-    val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
-    val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] =
+    // uncancelable until the cleanup is in place; only waiting for the bind can be cancelled
+    Async[F].uncancelable { poll =>
+      // deferred, so that each run allocates, also for Async instances which don't call the body lazily
+      Async[F].defer {
+        val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+        implicit val monadError: MonadError[F] = new CatsMonadError[F]()
+        val endpointRoute = serverEndpoints match {
+          case Vector() => Vector.empty
+          case _        => Vector(NettyCatsServerInterpreter(options).toRoute(serverEndpoints.toList))
+        }
+        val allRoutes = endpointRoute ++ otherRoutes
+        val route = allRoutes match {
+          case Vector()  => Route.empty
+          case Vector(r) => r
+          case many      => Route.combine(many)
+        }
+        val eventExecutor = new DefaultEventExecutor()
+        val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
+        val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
-    val channelFuture =
-      NettyBootstrap(
-        config,
-        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config),
-        eventLoopGroup,
-        socketOverride
-      )
+        val channelFuture =
+          NettyBootstrap(
+            config,
+            new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config),
+            eventLoopGroup,
+            socketOverride
+          )
 
-    nettyChannelFutureToScala(channelFuture)
-      .map(ch =>
-        (
-          ch.localAddress().asInstanceOf[SA],
-          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-        )
-      )
-      .recoverWith { case e =>
-        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-          .flatMap(_ => Async[F].raiseError(e))
+        val bound = poll(nettyChannelFutureToScala(channelFuture)).flatMap { ch =>
+          // repeated calls return the first call's result, as the executors are then shut down; uncancelable, as a cancelled first call
+          // would make `memoize` run the stop again
+          Async[F]
+            .memoize(stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown))
+            .map(stopped => (ch.localAddress().asInstanceOf[SA], () => Async[F].uncancelable(_ => stopped)))
+        }
+        Async[F].guaranteeCase(bound) {
+          case Outcome.Succeeded(_) => Async[F].unit
+          case _                    =>
+            // if cancelled, the bind might still complete
+            Async[F].defer(nettyFutureToScala(channelFuture.channel().close())).attempt >> shutdownExecutors(eventLoopGroup, eventExecutor)
+        }
       }
-  }
-
-  private def waitForClosedChannels(
-      channelGroup: ChannelGroup,
-      startNanos: Long,
-      gracefulShutdownTimeoutNanos: Option[Long]
-  ): F[Unit] =
-    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
-      Temporal[F].sleep(100.millis) >>
-        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
-    } else {
-      Sync[F].delay(nettyFutureToScala(channelGroup.close())).void
     }
 
   private def stop(
-      ch: Channel,
+      serverChannel: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
+      isShuttingDown: AtomicBoolean
   ): F[Unit] = {
-    shutdownChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
-      Async[F].defer {
-        nettyFutureToScala(ch.close()).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
-      }
+    val drain = Async[F].defer(
+      nettyFutureToScala(NettyShutdown.drain(serverChannel, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout))
+    )
+    Async[F].guarantee(drain.void, shutdownExecutors(eventLoopGroup, eventExecutor))
   }
 
-  private def stopRecovering(
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): F[Unit] = {
-    shutdownChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
-      stopEventLoopGroup(eventLoopGroup, eventExecutor)
-  }
-
-  private def shutdownChannelGroup(
-      channelGroup: ChannelGroup,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ) = {
-    Sync[F].delay(isShuttingDown.set(true)) >>
-      waitForClosedChannels(
-        channelGroup,
-        startNanos = System.nanoTime(),
-        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-      )
-  }
-
-  private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
-    if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
-    } else Async[F].unit
-  }
+  private def shutdownExecutors(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor): F[Unit] =
+    Async[F].defer(
+      nettyFutureToScala(
+        NettyShutdown.shutdownExecutors(eventLoopGroup, config.shutdownEventLoopGroupOnClose, eventExecutor)
+      ).void
+    )
 }
 
 object NettyCatsServer {

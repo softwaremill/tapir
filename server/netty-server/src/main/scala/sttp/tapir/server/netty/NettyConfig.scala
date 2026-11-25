@@ -27,13 +27,13 @@ import scala.concurrent.duration._
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
   *   contains tapir's server processing logic. A custom pipeline should use [[TapirHttpStreamsServerHandler]], as in
-  *   [[NettyConfig.defaultInitPipeline]], for `Expect: 100-continue` requests with lazily read bodies (streams) to work.
+  *   [[NettyConfig.defaultInitPipeline]], for `Expect: 100-continue` requests with lazily read bodies (streams) to work. The handler must
+  *   be added without an executor group, so that it runs on the channel's event loop.
   *
   * @param requestTimeout
-  *   The maximum duration between receiving the request headers and producing a response; it therefore also bounds how long the client has
-  *   to send the body. If exceeded, an empty response with `Connection: close` is sent and the connection is closed: `503` if the request
-  *   was fully received or the client awaits `100 Continue`, `408` if the client stalled sending the body. Ignored in Web Sockets (after a
-  *   handshake is established). Make sure it's lower than `idleTimeout`.
+  *   The maximum duration between receiving the request headers and starting to write a response. If exceeded, the connection is closed,
+  *   usually after a `503` or `408` response; see https://tapir.softwaremill.com/en/latest/server/netty.html#request-timeout. Make sure
+  *   it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
@@ -43,8 +43,8 @@ import scala.concurrent.duration._
   *   socket
   *
   * @param gracefulShutdownTimeout
-  *   If set, attempts to wait for a given time for all in-flight requests to complete, before proceeding with shutting down the server. If
-  *   `None`, closes the channels and terminates the server without waiting.
+  *   How long a stopped server waits for in-flight requests and web sockets to finish, before closing their connections; see
+  *   https://tapir.softwaremill.com/en/latest/server/netty.html#graceful-shutdown. If `None`, closes them without waiting.
   *
   * @param idleTimeout
   *   Maximum inactivity time of a given connection. If nothing is sent or received within this timeout, the connection closes. Make sure

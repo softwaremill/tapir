@@ -1602,7 +1602,7 @@ lazy val nettyServerSync: ProjectMatrix =
       scalaVersions = List(scala3),
       settings = commonJvmSettings ++ Seq(javaOutputVersion := "21") // ox requires JDK 21
     )
-    .dependsOn(nettyServer, serverTests % Test)
+    .dependsOn(nettyServer % CompileAndTest, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(
@@ -1627,7 +1627,7 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
       name := s"tapir-netty-server-$proj"
     )
     .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
-    .dependsOn(nettyServer, dependency, serverTests % Test)
+    .dependsOn(nettyServer % CompileAndTest, dependency, serverTests % Test)
 
 lazy val nimaServer: ProjectMatrix = (projectMatrix in file("server/nima-server"))
   .settings(

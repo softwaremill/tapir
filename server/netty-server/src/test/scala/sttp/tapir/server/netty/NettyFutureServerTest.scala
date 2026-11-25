@@ -8,6 +8,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.monad.FutureMonad
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
@@ -15,26 +16,36 @@ import sttp.client4._
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
-import scala.concurrent.Future
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class NettyFutureServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
         .make(IO.delay {
-          implicit val m: FutureMonad = new FutureMonad()
+          // not the suite's serial execution context, which runs one task at a time: then, tests in which requests block concurrently are flaky
+          val serverEc = ExecutionContext.global
+          implicit val m: FutureMonad = new FutureMonad()(serverEc)
           val eventLoopGroup = new NioEventLoopGroup()
 
-          val interpreter = new NettyFutureTestServerInterpreter(eventLoopGroup)
+          val interpreter = new NettyFutureTestServerInterpreter(eventLoopGroup)(serverEc)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests =
             new AllServerTests(createServerTest, interpreter, backend, multipart = true, partOtherHeaderSupport = false).tests() ++
-              new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests() ++
+              new ServerGracefulShutdownTests(createServerTest).tests() ++
+              new NettyServerStopTests(eventLoopGroup) {
+                // not IO.fromFuture, which can't be timed out
+                override def withServer[A](config: NettyConfig)(use: IO[Unit] => IO[A]): IO[A] =
+                  IO.blocking(Await.result(NettyFutureServer(config)(using serverEc).start(), 10.seconds))
+                    .flatMap(server => use(IO.blocking(Await.result(server.stop(), 10.seconds))))
+              }.tests() ++
               new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
-              additionalTests(backend) ++
+              additionalTests(backend, eventLoopGroup) ++
               expectContinueTests(createServerTest)
 
           (tests, eventLoopGroup)
@@ -44,7 +55,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .map { case (tests, _) => tests }
     }
 
-  def additionalTests(backend: Backend[IO])(implicit ec: ExecutionContext): List[Test] = List(
+  def additionalTests(backend: Backend[IO], eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext): List[Test] = List(
     // Netty samples the requests by default, hence leaks are only detected if the number of requests is large enough.
     // There are no assertions in this test, as if there are leaks, they are reported in the test output;
     // the verification is done as part of CI.
@@ -68,6 +79,39 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
               }
             }
             .map(_ => succeed)
+        }
+        .unsafeToFuture()
+    },
+    Test("a route throwing an exception, instead of returning a failed Future, should result in a 500, sent after the earlier responses") {
+      import cats.effect.unsafe.implicits.global
+
+      val releaseFirst = Promise[Unit]()
+      val secondReceived = new CountDownLatch(1)
+      val route: FutureRoute = request =>
+        if (request.pathSegments == List("first"))
+          releaseFirst.future.map(_ => Some(ServerResponse[NettyResponse](StatusCode.Ok, Nil, None, None)))(ec)
+        else {
+          secondReceived.countDown()
+          throw new RuntimeException("boom")
+        }
+
+      Resource
+        .make(IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).addRoute(route).start())))(server =>
+          IO.fromFuture(IO.delay(server.stop()))
+        )
+        .flatMap(server => rawSocket(server.port))
+        .use { socket =>
+          for {
+            _ <- sendRaw(socket, rawGet("/first") ++ rawGet("/second"))
+            // the second request is handled while the first one is in flight
+            secondArrived <- IO.blocking(secondReceived.await(10, TimeUnit.SECONDS))
+            _ <- IO(releaseFirst.success(()))
+            response1 <- readRawResponse(socket)
+            response2 <- readRawResponse(socket)
+          } yield {
+            (secondArrived shouldBe true): Unit
+            List(response1, response2) shouldBe List((200, ""), (500, ""))
+          }
         }
         .unsafeToFuture()
     }
