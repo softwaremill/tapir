@@ -323,22 +323,21 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-      - name: Extract version from commit message
-        if: matrix.java == '17'
-        run: |
-          version=${GITHUB_REF/refs\/tags\/v/}
-          echo "VERSION=$version" >> $GITHUB_ENV
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
+
+  # separate from publish, so that a failure here can be re-run without re-publishing artifacts
+  release-notes:
+    name: Publish release notes
+    needs: [publish]
+    runs-on: ubuntu-24.04
+    steps:
       - name: Publish release notes
-        if: matrix.java == '17'
         uses: release-drafter/release-drafter@d1a19e60e81a7e650d00a7de9277f87e439117ea # v6, specifically v7.11.0
         with:
           config-name: release-drafter.yml
           publish: true
-          name: "v${{ env.VERSION }}"
-          tag: "v${{ env.VERSION }}"
-          version: "v${{ env.VERSION }}"
+          name: ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
+          version: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
