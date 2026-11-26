@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
 @main def prometheusMetricsExample(): Unit =
-  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger("prometheusMetricsExample")
 
   case class Person(name: String)
 

@@ -67,7 +67,7 @@ import scala.io.StdIn
   * }}}
   */
 @main def openTelemetryMetricsExample(): Unit =
-  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger("openTelemetryMetricsExample")
 
   case class Person(name: String)
 

@@ -14,7 +14,7 @@ import sttp.tapir.Schema
 
 @main def booksExampleSemiauto(): Unit =
   import org.slf4j.{Logger, LoggerFactory}
-  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger("booksExampleSemiauto")
 
   type Limit = Option[Int]
   type AuthToken = String
