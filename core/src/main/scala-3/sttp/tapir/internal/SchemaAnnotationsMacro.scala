@@ -30,6 +30,11 @@ private[tapir] object SchemaAnnotationsMacro {
     } else tpe.typeSymbol
     // listed in reverse declaration order
     val annotations = annotationsSymbol.annotations.reverse
+    // Annotations read from TASTy (separate compilation) may contain lambdas with lazily-unpickled bodies. Splicing such
+    // a tree more than once crashes the compiler (`MatchError` in `TreeUnpickler.readConstant`), as the lazy body is
+    // read twice from the same TASTy reader. Traversing the trees forces (and caches) the bodies up front.
+    // See https://github.com/scala/scala3/issues/27659
+    annotations.foreach(a => new TreeTraverser {}.traverseTree(a)(Symbol.spliceOwner))
 
     def firstAnnArg(tpe: TypeRepr): Option[Tree] = {
       annotations
